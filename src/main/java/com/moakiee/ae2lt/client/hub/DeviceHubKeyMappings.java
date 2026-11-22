@@ -5,6 +5,10 @@ import org.lwjgl.glfw.GLFW;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.phys.EntityHitResult;
+import com.moakiee.ae2lt.celestweave.ArmorWearer;
+import com.moakiee.ae2lt.network.hub.OpenEntityDeviceHubPacket;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -61,6 +65,13 @@ public final class DeviceHubKeyMappings {
             }
 
             while (OPEN_CONFIG.consumeClick()) {
+                if (minecraft.hitResult instanceof EntityHitResult hit
+                        && hit.getEntity() instanceof LivingEntity wearer
+                        && ArmorWearer.isOwnedBy(wearer, minecraft.player)
+                        && hasEntityDevice(wearer)) {
+                    PacketDistributor.sendToServer(new OpenEntityDeviceHubPacket(wearer.getId()));
+                    continue;
+                }
                 int defaultTab = -1;
                 if (minecraft.player.getMainHandItem().getItem() instanceof ElectromagneticRailgunItem
                         || minecraft.player.getOffhandItem().getItem() instanceof ElectromagneticRailgunItem) {
@@ -96,6 +107,14 @@ public final class DeviceHubKeyMappings {
                     PacketDistributor.sendToServer(new OpenDeviceHubPacket(defaultTab));
                 }
             }
+        }
+
+        private static boolean hasEntityDevice(LivingEntity wearer) {
+            for (var armor : wearer.getArmorSlots()) {
+                if (armor.getItem() instanceof BaseCelestweaveArmorItem) return true;
+            }
+            return wearer.getMainHandItem().getItem() instanceof ElectromagneticRailgunItem
+                    || wearer.getOffhandItem().getItem() instanceof ElectromagneticRailgunItem;
         }
 
         private static int tabFor(EquipmentSlot slot) {

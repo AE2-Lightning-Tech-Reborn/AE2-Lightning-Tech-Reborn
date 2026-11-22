@@ -13,7 +13,7 @@ import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EquipmentSlot;
-import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.neoforge.network.PacketDistributor;
@@ -322,7 +322,7 @@ public final class CelestweaveArmorState {
     }
 
     public static void syncSubmoduleActiveState(
-            @Nullable Player player,
+            @Nullable LivingEntity player,
             ItemStack armor,
             HolderLookup.Provider registries,
             boolean equipped,
@@ -331,7 +331,7 @@ public final class CelestweaveArmorState {
     }
 
     public static void syncSubmoduleActiveState(
-            @Nullable Player player,
+            @Nullable LivingEntity player,
             ItemStack armor,
             HolderLookup.Provider registries,
             boolean equipped,
@@ -347,7 +347,7 @@ public final class CelestweaveArmorState {
     }
 
     public static void syncSubmoduleActiveState(
-            @Nullable Player player,
+            @Nullable LivingEntity player,
             ItemStack armor,
             List<InstalledSubmodule> installedSubmodules,
             boolean equipped,
@@ -356,18 +356,18 @@ public final class CelestweaveArmorState {
     }
 
     public static void syncSubmoduleActiveState(
-            @Nullable Player player,
+            @Nullable LivingEntity player,
             ItemStack armor,
             List<InstalledSubmodule> installedSubmodules,
             boolean equipped,
             Dist dist,
             boolean forceClientSync) {
         UUID armorId = ensureArmorId(armor);
-        boolean hasCore = equipped && ArmorPersistentData.hasStructuralCore(armor);
+        boolean hasCore = equipped && ArmorWearer.isEligible(player) && ArmorPersistentData.hasStructuralCore(armor);
         boolean dedicatedServer = dist == Dist.DEDICATED_SERVER && player instanceof ServerPlayer;
         for (var entry : installedSubmodules) {
             var submodule = entry.submodule();
-            boolean active = hasCore && isSubmoduleEnabled(armor, submodule)
+            boolean active = hasCore && submodule.supportsWearer(player) && isSubmoduleEnabled(armor, submodule)
                     && (isModulesPowered(armor) || (player != null
                             && ShieldChargeWindow.remainsActiveWithoutPassivePower(
                                     armor, submodule.id(), player.level().getGameTime())));
@@ -415,7 +415,7 @@ public final class CelestweaveArmorState {
     }
 
     public static void reconcileInstalledSubmodules(
-            @Nullable Player player,
+            @Nullable LivingEntity player,
             ItemStack armor,
             HolderLookup.Provider registries,
             Dist dist) {
@@ -426,7 +426,7 @@ public final class CelestweaveArmorState {
     }
 
     public static void tickActiveSubmodules(
-            @Nullable Player player,
+            @Nullable LivingEntity player,
             ItemStack armor,
             HolderLookup.Provider registries,
             Dist dist) {
@@ -434,7 +434,7 @@ public final class CelestweaveArmorState {
     }
 
     public static void tickActiveSubmodules(
-            @Nullable Player player,
+            @Nullable LivingEntity player,
             ItemStack armor,
             List<InstalledSubmodule> installedSubmodules,
             Dist dist) {
@@ -447,12 +447,12 @@ public final class CelestweaveArmorState {
         }
     }
 
-    public static Snapshot tickEquipped(Player player, ItemStack armor, HolderLookup.Provider registries) {
+    public static Snapshot tickEquipped(LivingEntity player, ItemStack armor, HolderLookup.Provider registries) {
         return tickEquipped(player, armor, collectInstalledSubmoduleEntries(armor, registries), registries);
     }
 
     public static Snapshot tickEquipped(
-            Player player,
+            LivingEntity player,
             ItemStack armor,
             List<InstalledSubmodule> installedSubmodules,
             HolderLookup.Provider registries) {
@@ -466,7 +466,7 @@ public final class CelestweaveArmorState {
     }
 
     public static Snapshot snapshot(
-            @Nullable Player player,
+            @Nullable LivingEntity player,
             ItemStack armor,
             HolderLookup.Provider registries,
             boolean equipped) {

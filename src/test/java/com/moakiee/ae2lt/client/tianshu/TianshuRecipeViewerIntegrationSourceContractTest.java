@@ -161,8 +161,8 @@ class TianshuRecipeViewerIntegrationSourceContractTest {
         assertTrue(emi.contains("currentScreen != EmiApi.getHandledScreen()"));
         assertTrue(emi.contains("TianshuDirectUploadClient.holdRecipeScreen("));
         assertTrue(picker.contains("directUploadRequested"));
-        assertTrue(picker.contains("automaticCandidate"));
-        assertTrue(picker.contains("if (selected != null) select("));
+        assertFalse(picker.contains("automaticCandidate"));
+        assertFalse(picker.contains("tryDirectUpload"));
         assertTrue(matcher.contains("findUniqueCandidate"));
         assertTrue(coordinator.contains("TianshuUploadSourceSelection.collect(menu)"));
         assertTrue(coordinator.contains("selection.initialQuery()"));

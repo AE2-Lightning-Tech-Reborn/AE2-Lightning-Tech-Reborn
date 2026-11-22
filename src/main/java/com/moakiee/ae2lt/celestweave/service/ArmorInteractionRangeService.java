@@ -4,7 +4,7 @@ import java.util.List;
 
 import net.minecraft.core.Holder;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
@@ -24,7 +24,7 @@ public final class ArmorInteractionRangeService {
     private ArmorInteractionRangeService() {
     }
 
-    public static void tick(ServerPlayer player, List<ActiveCapability> capabilities) {
+    public static void tick(LivingEntity player, List<ActiveCapability> capabilities) {
         double blockBonus = 0.0D;
         double entityBonus = 0.0D;
         for (var active : capabilities) {
@@ -40,7 +40,7 @@ public final class ArmorInteractionRangeService {
     }
 
     private static void updateModifier(
-            ServerPlayer player,
+            LivingEntity player,
             Holder<Attribute> attribute,
             ResourceLocation id,
             double amount) {

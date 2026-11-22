@@ -4,6 +4,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
+import com.moakiee.ae2lt.celestweave.ArmorWearer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -16,19 +18,26 @@ import com.moakiee.ae2lt.celestweave.phase.CelestweaveEquipmentAccess;
  */
 public class DeviceHubHost implements MenuProvider {
     private final int defaultTab;
+    private final LivingEntity wearer;
 
     public DeviceHubHost(int defaultTab) {
+        this(defaultTab, null);
+    }
+
+    private DeviceHubHost(int defaultTab, LivingEntity wearer) {
         this.defaultTab = defaultTab;
+        this.wearer = wearer;
     }
 
     @Override
     public Component getDisplayName() {
-        return Component.translatable("gui.ae2lt.device_hub");
+        return wearer == null ? Component.translatable("gui.ae2lt.device_hub")
+                : Component.translatable("gui.ae2lt.device_hub.entity", wearer.getDisplayName());
     }
 
     @Override
     public AbstractContainerMenu createMenu(int containerId, Inventory playerInventory, Player player) {
-        return new DeviceHubMenu(containerId, playerInventory, defaultTab);
+        return new DeviceHubMenu(containerId, playerInventory, defaultTab, wearer == null ? player : wearer);
     }
 
     /** Open the hub for a player with the given default tab. */
@@ -38,6 +47,26 @@ public class DeviceHubHost implements MenuProvider {
             return;
         }
         player.openMenu(new DeviceHubHost(resolvedTab), buf -> buf.writeVarInt(resolvedTab));
+    }
+
+    public static boolean canConfigure(Player player, LivingEntity wearer) {
+        return wearer == player || (!(wearer instanceof Player) && wearer.isAlive() && !wearer.isRemoved()
+                && wearer.level() == player.level()
+                && ArmorWearer.isOwnedBy(wearer, player)
+                && player.canInteractWithEntity(wearer, 1.0D));
+    }
+
+    public static void openForEntity(ServerPlayer player, LivingEntity wearer) {
+        if (!canConfigure(player, wearer) || !player.hasLineOfSight(wearer)) {
+            return;
+        }
+        int tab = resolveDefaultTab(wearer, DeviceHubMenu.TAB_CHESTPLATE);
+        if (tab >= 0) {
+            player.openMenu(new DeviceHubHost(tab, wearer), buf -> {
+                buf.writeVarInt(tab);
+                buf.writeVarInt(wearer.getId());
+            });
+        }
     }
 
     /** Map an equipment slot to its corresponding hub tab index. */
@@ -51,7 +80,7 @@ public class DeviceHubHost implements MenuProvider {
         };
     }
 
-    private static int resolveDefaultTab(Player player, int defaultTab) {
+    private static int resolveDefaultTab(LivingEntity player, int defaultTab) {
         if (hasDeviceForTab(player, defaultTab)) {
             return defaultTab;
         }
@@ -63,7 +92,7 @@ public class DeviceHubHost implements MenuProvider {
         return -1;
     }
 
-    private static boolean hasDeviceForTab(Player player, int tab) {
+    private static boolean hasDeviceForTab(LivingEntity player, int tab) {
         return switch (tab) {
             case DeviceHubMenu.TAB_HELMET -> hasArmor(player, EquipmentSlot.HEAD);
             case DeviceHubMenu.TAB_CHESTPLATE -> hasArmor(player, EquipmentSlot.CHEST);
@@ -74,11 +103,11 @@ public class DeviceHubHost implements MenuProvider {
         };
     }
 
-    private static boolean hasArmor(Player player, EquipmentSlot slot) {
+    private static boolean hasArmor(LivingEntity player, EquipmentSlot slot) {
         return !CelestweaveEquipmentAccess.findArmor(player, slot).isEmpty();
     }
 
-    private static boolean hasRailgun(Player player) {
+    private static boolean hasRailgun(LivingEntity player) {
         return player.getMainHandItem().getItem() instanceof ElectromagneticRailgunItem
                 || player.getOffhandItem().getItem() instanceof ElectromagneticRailgunItem;
     }

@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 
 import com.moakiee.ae2lt.config.AE2LTCommonConfig;
@@ -50,12 +51,12 @@ public record DeviceStatusModel(
             false, RailgunExecutionMode.NORMAL, false, false);
 
     /** Build status snapshot from an armor stack worn by the player. */
-    public static DeviceStatusModel fromArmorStack(ItemStack armor, ServerPlayer player) {
+    public static DeviceStatusModel fromArmorStack(ItemStack armor, LivingEntity player) {
         return fromArmorStack(armor, player, 0);
     }
 
     /** Build status snapshot from an armor stack worn by the player. */
-    public static DeviceStatusModel fromArmorStack(ItemStack armor, ServerPlayer player, int selectedModuleIndex) {
+    public static DeviceStatusModel fromArmorStack(ItemStack armor, LivingEntity player, int selectedModuleIndex) {
         if (armor == null || armor.isEmpty() || !(armor.getItem() instanceof BaseCelestweaveArmorItem armorItem)) {
             return EMPTY;
         }
@@ -158,7 +159,7 @@ public record DeviceStatusModel(
                 settings.chargedSplash(), entries.hasEhvBeam() && settings.ehvBeamEnabled());
     }
 
-    private static List<ModuleConfigInfo> moduleConfigs(ItemStack armor, ServerPlayer player, int selectedModuleIndex) {
+    private static List<ModuleConfigInfo> moduleConfigs(ItemStack armor, LivingEntity player, int selectedModuleIndex) {
         var submodules = CelestweaveArmorState.collectSubmodules(armor, player.registryAccess());
         if (selectedModuleIndex < 0 || selectedModuleIndex >= submodules.size()) {
             return List.of();

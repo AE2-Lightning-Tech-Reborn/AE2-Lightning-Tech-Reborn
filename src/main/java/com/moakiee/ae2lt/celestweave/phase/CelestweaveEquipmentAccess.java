@@ -2,7 +2,7 @@ package com.moakiee.ae2lt.celestweave.phase;
 
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EquipmentSlot;
-import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 
 import com.moakiee.ae2lt.celestweave.BaseCelestweaveArmorItem;
@@ -12,7 +12,7 @@ public final class CelestweaveEquipmentAccess {
     private CelestweaveEquipmentAccess() {
     }
 
-    public static ItemStack findArmor(Player player, EquipmentSlot slot) {
+    public static ItemStack findArmor(LivingEntity player, EquipmentSlot slot) {
         if (slot.getType() == EquipmentSlot.Type.HUMANOID_ARMOR
                 && player instanceof ServerPlayer serverPlayer) {
             ItemStack privateArmor = PhaseLockService.getPrivateArmor(serverPlayer, slot);

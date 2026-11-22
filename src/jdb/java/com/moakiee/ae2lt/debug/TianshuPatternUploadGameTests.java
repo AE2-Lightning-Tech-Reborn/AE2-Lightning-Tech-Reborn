@@ -111,15 +111,25 @@ public final class TianshuPatternUploadGameTests {
 
     @net.minecraft.gametest.framework.GameTest(templateNamespace = "ae2lt", template = "workstation_test", timeoutTicks = 150)
     public static void wiredFullTargetRetainsEncodedPattern(GameTestHelper helper) {
-        fullTarget(helper, false);
+        fullTarget(helper, false, false);
     }
 
     @net.minecraft.gametest.framework.GameTest(templateNamespace = "ae2lt", template = "workstation_test", timeoutTicks = 150)
     public static void wirelessFullTargetRetainsEncodedPattern(GameTestHelper helper) {
-        fullTarget(helper, true);
+        fullTarget(helper, true, false);
     }
 
-    private static void fullTarget(GameTestHelper helper, boolean wireless) {
+    @net.minecraft.gametest.framework.GameTest(templateNamespace = "ae2lt", template = "workstation_test", timeoutTicks = 150)
+    public static void wiredFullProcessingTargetRetainsEncodedPattern(GameTestHelper helper) {
+        fullTarget(helper, false, true);
+    }
+
+    @net.minecraft.gametest.framework.GameTest(templateNamespace = "ae2lt", template = "workstation_test", timeoutTicks = 150)
+    public static void wirelessFullProcessingTargetRetainsEncodedPattern(GameTestHelper helper) {
+        fullTarget(helper, true, true);
+    }
+
+    private static void fullTarget(GameTestHelper helper, boolean wireless, boolean processing) {
         var level = helper.getLevel();
         var player = FakePlayerFactory.get(level, new GameProfile(UUID.randomUUID(), "UploadRetention"));
         var cable = helper.absolutePos(new BlockPos(3, 2, 3));
@@ -159,17 +169,27 @@ public final class TianshuPatternUploadGameTests {
                     ? new TianshuWirelessPatternEncodingTermMenu(17, player.getInventory(), wirelessHost)
                     : new TianshuPatternEncodingTermMenu(17, player.getInventory(), terminal);
             player.containerMenu = menu;
-            menu.getSlots(SlotSemantics.CRAFTING_GRID).getFirst().set(new ItemStack(Items.OAK_LOG));
+            if (processing) {
+                menu.setMode(appeng.parts.encoding.EncodingMode.PROCESSING);
+                menu.getSlots(SlotSemantics.PROCESSING_INPUTS).getFirst().set(new ItemStack(Items.IRON_INGOT));
+                menu.getSlots(SlotSemantics.PROCESSING_OUTPUTS).getFirst().set(new ItemStack(Items.GOLD_INGOT));
+            } else {
+                menu.getSlots(SlotSemantics.CRAFTING_GRID).getFirst().set(new ItemStack(Items.OAK_LOG));
+            }
             menu.broadcastChanges();
             menu.encode();
             var encodedInventory = (wireless ? wirelessHost.getLogic() : terminal.getLogic()).getEncodedPatternInv();
             var encoded = encodedInventory.getStackInSlot(0).copy();
-            check(helper, PatternDetailsHelper.decodePattern(encoded, level) != null, "native crafting encoding succeeds");
+            check(helper, PatternDetailsHelper.decodePattern(encoded, level) != null, "native encoding succeeds");
             check(helper, storage.extract(blank, 99, Actionable.SIMULATE, source) == 7, "encoding charges one blank");
+            menu.sendUploadTargets(player);
             for (int i = 0; i < target.size(); i++) target.setItemDirect(i, encoded.copy());
 
             for (int attempt = 0; attempt < 3; attempt++) {
-                menu.uploadEncodedPattern();
+                if (processing) {
+                    menu.uploadTianshuPatternToTarget(player, provider.getLogic().getTerminalGroup(),
+                            menu.getUploadTargetRequestRevision(), menu.triggeredUploadAck);
+                } else menu.uploadEncodedPattern();
                 check(helper, menu.uploadState == 3, "full target reports upload failure");
                 check(helper, ItemStack.matches(encoded, encodedInventory.getStackInSlot(0)),
                         "failed upload retains the exact paid encoded pattern in its slot");
@@ -192,7 +212,11 @@ public final class TianshuPatternUploadGameTests {
                 reopened.broadcastChanges();
                 check(helper, target.getStackInSlot(0).isEmpty() && ItemStack.matches(encoded, retained.getStackInSlot(0)),
                         "freeing target space waits for a user action");
-                reopened.uploadEncodedPattern();
+                if (processing) {
+                    reopened.sendUploadTargets(player);
+                    reopened.uploadTianshuPatternToTarget(player, provider.getLogic().getTerminalGroup(),
+                            reopened.getUploadTargetRequestRevision());
+                } else reopened.uploadEncodedPattern();
                 check(helper, reopened.uploadState == 1 && retained.getStackInSlot(0).isEmpty(), "manual retry succeeds");
                 check(helper, ItemStack.matches(encoded, target.getStackInSlot(0)), "target receives the retained pattern intact");
                 check(helper, storage.extract(blank, 99, Actionable.SIMULATE, source) == 7, "retry consumes no new blank");
@@ -211,7 +235,8 @@ public final class TianshuPatternUploadGameTests {
                         "duplicate interception still refunds only a newly rejected encoding");
                 reopened.removed(player);
                 player.containerMenu = player.inventoryMenu;
-                System.out.println("TIANSHU_UPLOAD_RETENTION_PASS " + (wireless ? "wireless" : "wired"));
+                System.out.println("TIANSHU_UPLOAD_RETENTION_PASS " + (wireless ? "wireless" : "wired")
+                        + (processing ? " processing" : " crafting"));
                 helper.succeed();
             });
         });
@@ -266,6 +291,11 @@ public final class TianshuPatternUploadGameTests {
             a.sendUploadTargets(alice);
             a.uploadTianshuPatternToTarget(alice, group, a.getUploadTargetRequestRevision());
             check(helper, a.uploadState == 1 && source.isEmpty() && !target.isEmpty(), "Alice upload succeeds");
+            a.removed(alice);
+            a = new TianshuPatternEncodingTermMenu(33, alice.getInventory(), terminal);
+            alice.containerMenu = a;
+            a.broadcastChanges();
+            check(helper, a.canUndoUpload, "Alice keeps her receipt after reopening the terminal");
             b.undoLastUpload();
             check(helper, source.isEmpty() && !target.isEmpty(), "Bob cannot undo Alice's receipt");
             a.undoLastUpload();
@@ -368,8 +398,20 @@ public final class TianshuPatternUploadGameTests {
             var repository = port.getClosedLoopPatternRepository();
             source.setItemDirect(0, pattern.copy());
             menu.broadcastChanges();
+            while (repository.size() < repository.capacity()) repository.add(payload);
+            port.closedLoopPatternsChanged();
+            menu.uploadEncodedPattern();
+            check(helper, menu.uploadState == 3 && ItemStack.matches(pattern, source.getStackInSlot(0)),
+                    "full closed-loop warehouse retains the exact encoded pattern");
+            repository.clear();
+            port.closedLoopPatternsChanged();
             menu.uploadEncodedPattern();
             check(helper, source.isEmpty() && repository.size() == 1 && menu.canUndoUpload, "closed-loop upload creates receipt");
+            menu.removed(player);
+            menu = new TianshuPatternEncodingTermMenu(42, player.getInventory(), terminal);
+            player.containerMenu = menu;
+            menu.broadcastChanges();
+            check(helper, menu.canUndoUpload, "closed-loop receipt survives reopening the terminal");
             menu.undoLastUpload();
             check(helper, repository.size() == 0 && ItemStack.matches(pattern, source.getStackInSlot(0)), "closed-loop undo restores paid stack");
             menu.uploadEncodedPattern();
@@ -379,6 +421,13 @@ public final class TianshuPatternUploadGameTests {
             menu.undoLastUpload();
             check(helper, repository.size() == 1 && repository.get(0) == payload && source.isEmpty() && !menu.canUndoUpload,
                     "another player's logical replacement cannot be undone by an old receipt");
+            source.setItemDirect(0, pattern.copy());
+            menu.broadcastChanges();
+            level.setBlockAndUpdate(portPos, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+            menu.uploadEncodedPattern();
+            check(helper, menu.uploadState == 3 && ItemStack.matches(pattern, source.getStackInSlot(0)),
+                    "disappeared closed-loop target retains the exact encoded pattern: state="
+                            + menu.uploadState + ", retained=" + ItemStack.matches(pattern, source.getStackInSlot(0)));
             menu.removed(player);
             player.containerMenu = player.inventoryMenu;
             System.out.println("TIANSHU_CLOSED_LOOP_UNDO_PASS");

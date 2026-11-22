@@ -1,6 +1,6 @@
 package com.moakiee.ae2lt.celestweave;
 
-import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.energy.IEnergyStorage;
@@ -53,7 +53,7 @@ public final class ArmorEnergyBuffer {
         write(stack, registries, read(stack, registries));
     }
 
-    public static boolean tryConsume(ItemStack stack, ServerPlayer player, long amount) {
+    public static boolean tryConsume(ItemStack stack, LivingEntity player, long amount) {
         if (amount <= 0L) {
             return true;
         }
@@ -66,8 +66,8 @@ public final class ArmorEnergyBuffer {
         return false;
     }
 
-    public static long refillFromNetwork(ItemStack stack, ServerPlayer player, long maxAmount) {
-        if (stack == null || stack.isEmpty() || player == null || maxAmount <= 0L) {
+    public static long refillFromNetwork(ItemStack stack, LivingEntity player, long maxAmount) {
+        if (stack == null || stack.isEmpty() || !ArmorWearer.canRun(player) || maxAmount <= 0L) {
             return 0L;
         }
         var registries = player.registryAccess();
@@ -88,7 +88,7 @@ public final class ArmorEnergyBuffer {
             return 0L;
         }
         var storage = grid.getStorageService().getInventory();
-        IActionSource source = IActionSource.ofPlayer(player);
+        IActionSource source = ArmorWearer.actionSource(player);
         long request = Math.min(room, maxAmount);
         long got = storage.extract(AppFluxBridge.FE_KEY, request, Actionable.MODULATE, source);
         if (got <= 0L) {

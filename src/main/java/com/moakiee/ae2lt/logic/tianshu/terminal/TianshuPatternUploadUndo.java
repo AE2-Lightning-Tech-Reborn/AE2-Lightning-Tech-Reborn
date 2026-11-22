@@ -10,7 +10,7 @@ import com.moakiee.ae2lt.logic.tianshu.loop.ClosedLoopPatternRepository;
 import java.util.List;
 import net.minecraft.world.item.ItemStack;
 
-/** One server-menu receipt. Undo returns a paid pattern, never another blank or a client-supplied item. */
+/** One player-connection receipt. Undo returns a paid pattern, never a blank or a client-supplied item. */
 public final class TianshuPatternUploadUndo {
     private Receipt last;
 

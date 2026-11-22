@@ -88,6 +88,12 @@ public final class TianshuTerminalSettingsScreen<M extends MEStorageMenu>
                 + AE2LTClientConfig.uploadMatchMode().name().toLowerCase(java.util.Locale.ROOT));
     }
 
+    @Override
+    protected void init() {
+        super.init();
+        if (patternTerminal) autoUploadButton.setMessage(autoUploadLabel());
+    }
+
     private void cycleTrigger() {
         TianshuUploadTrigger next = AE2LTClientConfig.uploadTrigger().next();
         AE2LTClientConfig.setUploadTrigger(next);

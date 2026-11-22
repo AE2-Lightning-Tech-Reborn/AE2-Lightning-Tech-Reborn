@@ -11,6 +11,7 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
@@ -43,6 +44,11 @@ public final class PhaseFlightSubmodule extends AbstractCelestweaveArmorSubmodul
     private static final int ESCAPE_PHASE_TICKS = 40;
 
     private PhaseFlightSubmodule() {
+    }
+
+    @Override
+    public boolean supportsWearer(@Nullable LivingEntity wearer) {
+        return wearer instanceof Player;
     }
 
     @Override

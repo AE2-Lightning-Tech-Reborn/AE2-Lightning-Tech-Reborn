@@ -283,7 +283,11 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
         if (!menu.consumeTriggeredUpload()) return;
         boolean directUploadRequested = menu.consumeDirectUploadRequest();
         switch (route) {
-            case CLOSED_LOOP_STORAGE, CRAFTING_ASSEMBLER, OMNIVERSAL_FURNACE -> menu.uploadEncodedPattern();
+            case OMNIVERSAL_FURNACE -> menu.uploadEncodedPattern();
+            case CLOSED_LOOP_STORAGE, CRAFTING_ASSEMBLER -> {
+                menu.uploadEncodedPattern();
+                TianshuDirectUploadClient.awaitResult(menu, null);
+            }
             case PROCESSING_PROVIDER -> {
                 if (target != null) {
                     menu.uploadTianshuPatternToTarget(target.group(), true);

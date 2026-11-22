@@ -7,6 +7,7 @@ import org.jetbrains.annotations.Nullable;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -78,6 +79,8 @@ public class DeviceHubMenu extends AbstractContainerMenu {
 
     // ── Server-side state ──
     private int selectedTab;
+    private LivingEntity wearer;
+    private int targetEntityId = -1;
     private int lastSyncedTab = -1;
     @Nullable
     private DeviceHubSyncPacket lastSyncPacket;
@@ -86,6 +89,7 @@ public class DeviceHubMenu extends AbstractContainerMenu {
     public DeviceHubMenu(int containerId, Inventory inv, FriendlyByteBuf buf) {
         super(TYPE, containerId);
         this.selectedTab = buf.readVarInt();
+        this.targetEntityId = buf.isReadable() ? buf.readVarInt() : -1;
         this.data = new SimpleContainerData(DATA_COUNT);
         this.data.set(DATA_SELECTED_TAB, selectedTab);
         addDataSlots(data);
@@ -93,7 +97,13 @@ public class DeviceHubMenu extends AbstractContainerMenu {
 
     // ── Server constructor ──
     public DeviceHubMenu(int containerId, Inventory inv, int defaultTab) {
+        this(containerId, inv, defaultTab, inv.player);
+    }
+
+    public DeviceHubMenu(int containerId, Inventory inv, int defaultTab, LivingEntity wearer) {
         super(TYPE, containerId);
+        this.wearer = wearer;
+        this.targetEntityId = wearer == inv.player ? -1 : wearer.getId();
         this.selectedTab = defaultTab;
         this.trackedPlayer = inv.player;
         this.data = new ServerData();
@@ -107,7 +117,17 @@ public class DeviceHubMenu extends AbstractContainerMenu {
 
     @Override
     public boolean stillValid(Player player) {
-        return true;
+        return wearer == null || DeviceHubHost.canConfigure(player, wearer);
+    }
+
+    public boolean isEntityEquipment() {
+        return targetEntityId >= 0;
+    }
+
+    /** Resolve the display target without ever falling back to the viewer's armor. */
+    public @Nullable LivingEntity getEquipmentWearer(Player viewer) {
+        if (!isEntityEquipment()) return viewer;
+        return viewer.level().getEntity(targetEntityId) instanceof LivingEntity target ? target : null;
     }
 
     // ── Server-side: periodic sync ──
@@ -115,6 +135,11 @@ public class DeviceHubMenu extends AbstractContainerMenu {
     public void broadcastChanges() {
         if (!(getPlayer() instanceof ServerPlayer serverPlayer)) {
             super.broadcastChanges();
+            return;
+        }
+
+        if (!stillValid(serverPlayer)) {
+            serverPlayer.closeContainer();
             return;
         }
 
@@ -144,7 +169,7 @@ public class DeviceHubMenu extends AbstractContainerMenu {
         } else if (selectedTab == TAB_RAILGUN) {
             status = DeviceStatusModel.fromRailgunStack(deviceStack, serverPlayer, selectedModuleIndex);
         } else {
-            status = DeviceStatusModel.fromArmorStack(deviceStack, serverPlayer, selectedModuleIndex);
+            status = DeviceStatusModel.fromArmorStack(deviceStack, wearer, selectedModuleIndex);
         }
         selectedModuleIndex = status.selectedModuleIndex();
         // Update ContainerData
@@ -371,8 +396,9 @@ public class DeviceHubMenu extends AbstractContainerMenu {
         var sub = submodules.get(moduleIndex);
         boolean current = CelestweaveArmorState.isSubmoduleEnabled(deviceStack, sub);
         CelestweaveArmorState.setSubmoduleEnabled(deviceStack, sub, !current);
-        if (current && PhaseLockSubmodule.INSTANCE.id().equals(sub.id())) {
-            PhaseLockService.release(player);
+        if (current && PhaseLockSubmodule.INSTANCE.id().equals(sub.id())
+                && wearer instanceof ServerPlayer wearerPlayer) {
+            PhaseLockService.release(wearerPlayer);
         }
     }
 
@@ -458,25 +484,32 @@ public class DeviceHubMenu extends AbstractContainerMenu {
         var next = config.nextValue();
         if (next == null) return;
         submodule.setConfig(deviceStack, config.key(), next);
+        if (!(wearer instanceof ServerPlayer wearerPlayer)) {
+            return;
+        }
         // sync inertia to client when flight module config changes
         if ("flight_inertia".equals(config.key())
                 || FlightSpeedOption.CONFIG_KEY.equals(config.key())
                 || PhaseFlightSubmodule.PHASE_MODE_CONFIG_KEY.equals(config.key())
                 || PhaseLockSubmodule.FLIGHT_LOCK_CONFIG_KEY.equals(config.key())) {
-            CelestweaveArmorState.syncFlightSettingsToClient(player);
+            CelestweaveArmorState.syncFlightSettingsToClient(wearerPlayer);
         }
         if (PhaseLockSubmodule.BLOCK_EXTERNAL_FORCES_CONFIG_KEY.equals(config.key())
                 || PhaseLockSubmodule.BLOCK_EXTERNAL_TELEPORTS_CONFIG_KEY.equals(config.key())) {
-            CelestweaveArmorState.syncPhaseLockProtectionToClient(player, deviceStack);
+            CelestweaveArmorState.syncPhaseLockProtectionToClient(wearerPlayer, deviceStack);
         }
         if (PhaseLockSubmodule.ARMOR_LOCK_CONFIG_KEY.equals(config.key())
                 && !PhaseLockSubmodule.isArmorLockEnabled(deviceStack)) {
-            PhaseLockService.release(player);
+            PhaseLockService.release(wearerPlayer);
         }
     }
 
     // ── Device lookup ──
-    private static ItemStack findDevice(Player player, int tab) {
+    private ItemStack findDevice(Player viewer, int tab) {
+        if (!stillValid(viewer)) {
+            return ItemStack.EMPTY;
+        }
+        LivingEntity player = wearer == null ? viewer : wearer;
         return switch (tab) {
             case TAB_HELMET -> findArmor(player, EquipmentSlot.HEAD);
             case TAB_CHESTPLATE -> findArmor(player, EquipmentSlot.CHEST);
@@ -487,11 +520,11 @@ public class DeviceHubMenu extends AbstractContainerMenu {
         };
     }
 
-    private static ItemStack findArmor(Player player, EquipmentSlot slot) {
+    private static ItemStack findArmor(LivingEntity player, EquipmentSlot slot) {
         return CelestweaveEquipmentAccess.findArmor(player, slot);
     }
 
-    private static ItemStack findRailgun(Player player) {
+    private static ItemStack findRailgun(LivingEntity player) {
         ItemStack main = player.getMainHandItem();
         if (main.getItem() instanceof ElectromagneticRailgunItem) return main;
         ItemStack off = player.getOffhandItem();

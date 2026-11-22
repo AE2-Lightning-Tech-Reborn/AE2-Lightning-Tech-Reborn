@@ -8,6 +8,7 @@ import net.minecraft.nbt.ByteTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.neoforge.common.extensions.IPlayerExtension;
@@ -28,6 +29,11 @@ public final class FlightSubmodule extends AbstractCelestweaveArmorSubmodule {
     private static final String TAG_PREVIOUS_SPEED = "FlightPreviousFlyingSpeed";
     private static final float SPEED_EPSILON = 1.0E-6F;
     private FlightSubmodule() {}
+
+    @Override
+    public boolean supportsWearer(@Nullable LivingEntity wearer) {
+        return wearer instanceof Player;
+    }
 
     @Override
     public String id() {

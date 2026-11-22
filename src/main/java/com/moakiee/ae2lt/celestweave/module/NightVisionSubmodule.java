@@ -5,6 +5,7 @@ import org.jetbrains.annotations.Nullable;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.api.distmarker.Dist;
 
@@ -45,28 +46,43 @@ public final class NightVisionSubmodule extends AbstractCelestweaveArmorSubmodul
     }
 
     @Override
-    public void onActivated(@Nullable Player player, Dist dist, ItemStack armor) {
+    public void onActivated(@Nullable LivingEntity player, Dist dist, ItemStack armor) {
         if (player != null && dist == Dist.DEDICATED_SERVER) {
             applyEffect(player);
         }
     }
 
     @Override
-    public void onDeactivated(@Nullable Player player, Dist dist, ItemStack armor) {
+    public void onDeactivated(@Nullable LivingEntity player, Dist dist, ItemStack armor) {
         if (player != null && dist == Dist.DEDICATED_SERVER) {
             player.removeEffect(MobEffects.NIGHT_VISION);
         }
     }
 
     @Override
-    public int tickActive(@Nullable Player player, Dist dist, ItemStack armor) {
+    public int tickActive(@Nullable LivingEntity player, Dist dist, ItemStack armor) {
         if (player != null && dist == Dist.DEDICATED_SERVER) {
             applyEffect(player);
         }
         return 0;
     }
 
-    private static void applyEffect(Player player) {
+    @Override
+    public void onActivated(@Nullable Player player, Dist dist, ItemStack armor) {
+        onActivated((LivingEntity) player, dist, armor);
+    }
+
+    @Override
+    public void onDeactivated(@Nullable Player player, Dist dist, ItemStack armor) {
+        onDeactivated((LivingEntity) player, dist, armor);
+    }
+
+    @Override
+    public int tickActive(@Nullable Player player, Dist dist, ItemStack armor) {
+        return tickActive((LivingEntity) player, dist, armor);
+    }
+
+    private static void applyEffect(LivingEntity player) {
         var currentEffect = player.getEffect(MobEffects.NIGHT_VISION);
         if (currentEffect != null && !currentEffect.endsWithin(REFRESH_THRESHOLD_TICKS)) {
             return;

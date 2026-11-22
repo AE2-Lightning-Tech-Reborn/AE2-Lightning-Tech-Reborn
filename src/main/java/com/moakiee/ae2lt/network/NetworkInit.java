@@ -4,6 +4,7 @@ import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.network.hub.DeviceHubActionPacket;
 import com.moakiee.ae2lt.network.hub.DeviceHubSyncPacket;
 import com.moakiee.ae2lt.network.hub.OpenDeviceHubPacket;
+import com.moakiee.ae2lt.network.hub.OpenEntityDeviceHubPacket;
 import com.moakiee.ae2lt.network.railgun.RailgunBeamChainFxPacket;
 import com.moakiee.ae2lt.network.railgun.RailgunBeamTogglePacket;
 import com.moakiee.ae2lt.network.railgun.RailgunBeamUpdatePacket;
@@ -188,6 +189,10 @@ public final class NetworkInit {
                 OpenDeviceHubPacket.STREAM_CODEC,
                 OpenDeviceHubPacket::handle);
         registrar.playToServer(
+                OpenEntityDeviceHubPacket.TYPE,
+                OpenEntityDeviceHubPacket.STREAM_CODEC,
+                OpenEntityDeviceHubPacket::handle);
+        registrar.playToServer(
                 DeviceHubActionPacket.TYPE,
                 DeviceHubActionPacket.STREAM_CODEC,
                 DeviceHubActionPacket::handle);
@@ -221,7 +226,7 @@ public final class NetworkInit {
                 SelectOmniversalPatternPacket.TYPE,
                 SelectOmniversalPatternPacket.STREAM_CODEC,
                 SelectOmniversalPatternPacket::handle);
-        registrar.playToServer(
+        registrar.versioned("upload-target-query-3").playToServer(
                 RequestUploadTargetsPacket.TYPE,
                 RequestUploadTargetsPacket.STREAM_CODEC,
                 RequestUploadTargetsPacket::handle);
@@ -233,7 +238,7 @@ public final class NetworkInit {
                 UploadPatternToTargetPacket.TYPE,
                 UploadPatternToTargetPacket.STREAM_CODEC,
                 UploadPatternToTargetPacket::handle);
-        registrar.versioned("upload-target-2").playToClient(
+        registrar.versioned("upload-target-query-3").playToClient(
                 UploadTargetsSyncPacket.TYPE,
                 UploadTargetsSyncPacket.STREAM_CODEC,
                 UploadTargetsSyncPacket::handle);

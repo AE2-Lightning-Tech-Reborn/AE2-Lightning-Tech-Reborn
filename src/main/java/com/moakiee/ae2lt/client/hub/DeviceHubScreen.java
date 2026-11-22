@@ -24,8 +24,8 @@ import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.PacketDistributor;
 
@@ -220,6 +220,10 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
         super.render(gfx, mouseX, mouseY, partialTick);
         refresh();
         embeddedUI.getWidget().render(gfx, mouseX, mouseY, partialTick);
+        if (menu.isEntityEquipment()) {
+            gfx.drawString(font, FittingText.withEllipsis(font, title.getString(), GUI_WIDTH),
+                    leftPos, topPos - 12, TEXT_ON_DARK_BG, true);
+        }
         renderTabTooltips(gfx, mouseX, mouseY);
         renderTooltip(gfx, mouseX, mouseY);
     }
@@ -687,7 +691,8 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
         if (minecraft == null || minecraft.player == null) {
             return ItemStack.EMPTY;
         }
-        Player player = minecraft.player;
+        LivingEntity player = menu.getEquipmentWearer(minecraft.player);
+        if (player == null) return ItemStack.EMPTY;
         return switch (tab) {
             case DeviceHubMenu.TAB_HELMET -> armorStack(player, EquipmentSlot.HEAD);
             case DeviceHubMenu.TAB_CHESTPLATE -> armorStack(player, EquipmentSlot.CHEST);
@@ -698,12 +703,12 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
         };
     }
 
-    private static ItemStack armorStack(Player player, EquipmentSlot slot) {
+    private static ItemStack armorStack(LivingEntity player, EquipmentSlot slot) {
         ItemStack stack = player.getItemBySlot(slot);
         return stack.getItem() instanceof BaseCelestweaveArmorItem ? stack : ItemStack.EMPTY;
     }
 
-    private static ItemStack railgunStack(Player player) {
+    private static ItemStack railgunStack(LivingEntity player) {
         ItemStack main = player.getMainHandItem();
         if (main.getItem() instanceof ElectromagneticRailgunItem) {
             return main;

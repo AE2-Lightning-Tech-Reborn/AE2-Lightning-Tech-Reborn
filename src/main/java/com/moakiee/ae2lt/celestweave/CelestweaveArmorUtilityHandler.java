@@ -7,6 +7,7 @@ import org.jetbrains.annotations.Nullable;
 
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.food.FoodData;
 import net.minecraft.world.item.ItemStack;
@@ -59,16 +60,27 @@ public final class CelestweaveArmorUtilityHandler {
         }
     }
 
+    /** Passive effects use the companion itself; player abilities and food data are separate. */
+    public static void tickEntityUtilities(LivingEntity wearer) {
+        var capabilities = ArmorCapabilityCollector.collectPerInstalledStack(wearer);
+        extinguishShieldedPlayer(wearer, capabilities);
+        ArmorInteractionRangeService.tick(wearer, capabilities);
+        ArmorMovementAssistService.tick(wearer, capabilities);
+        tickPurification(wearer, capabilities);
+    }
+
     @SubscribeEvent
     public static void onLivingEquipmentChange(LivingEquipmentChangeEvent event) {
-        if (!(event.getEntity() instanceof ServerPlayer player)) {
+        LivingEntity player = event.getEntity();
+        if (player.level().isClientSide()) {
             return;
         }
         ItemStack removedArmor = event.getFrom();
         if (removedArmor.isEmpty() || !(removedArmor.getItem() instanceof BaseCelestweaveArmorItem)) {
             return;
         }
-        if (PhaseLockService.keepsLogicallyEquipped(player, event.getSlot(), removedArmor)) {
+        if (player instanceof ServerPlayer serverPlayer
+                && PhaseLockService.keepsLogicallyEquipped(serverPlayer, event.getSlot(), removedArmor)) {
             return;
         }
         if (!PhaseFlightArmorRemovalRules.shouldDeactivateRemovedArmor(
@@ -77,6 +89,9 @@ public final class CelestweaveArmorUtilityHandler {
             return;
         }
         deactivateRemovedArmor(player, removedArmor);
+        if (!(player instanceof Player)) {
+            tickEntityUtilities(player);
+        }
     }
 
     @SubscribeEvent
@@ -136,7 +151,8 @@ public final class CelestweaveArmorUtilityHandler {
 
     @SubscribeEvent
     public static void onMobEffectApplicable(MobEffectEvent.Applicable event) {
-        if (!(event.getEntity() instanceof ServerPlayer player)
+        LivingEntity player = event.getEntity();
+        if (!ArmorWearer.canRun(player)
                 || !PurificationEffectRules.canPurify(event.getEffectInstance())) {
             return;
         }
@@ -148,7 +164,7 @@ public final class CelestweaveArmorUtilityHandler {
         }
     }
 
-    private static void tickPurification(ServerPlayer player, List<ActiveCapability> capabilities) {
+    private static void tickPurification(LivingEntity player, List<ActiveCapability> capabilities) {
         for (var active : capabilities) {
             if (!(active.capability() instanceof DeviceCapability.PurificationTuning purification)) {
                 continue;
@@ -162,7 +178,7 @@ public final class CelestweaveArmorUtilityHandler {
         }
     }
 
-    private static int purifyEffects(ServerPlayer player, int maxEffects) {
+    private static int purifyEffects(LivingEntity player, int maxEffects) {
         int removed = 0;
         for (var effect : List.copyOf(player.getActiveEffects())) {
             if (removed >= maxEffects) {
@@ -211,7 +227,7 @@ public final class CelestweaveArmorUtilityHandler {
     }
 
     private static void extinguishShieldedPlayer(
-            ServerPlayer player,
+            LivingEntity player,
             List<ActiveCapability> capabilities) {
         if (!player.isOnFire()) {
             return;
@@ -264,7 +280,7 @@ public final class CelestweaveArmorUtilityHandler {
         return CelestweaveArmorState.getArmorId(armor);
     }
 
-    private static void deactivateRemovedArmor(ServerPlayer player, ItemStack armor) {
+    private static void deactivateRemovedArmor(LivingEntity player, ItemStack armor) {
         ArmorCapabilityCollector.clearCache(player);
         CelestweaveArmorState.syncSubmoduleActiveState(
                 player,

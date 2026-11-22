@@ -6,7 +6,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import net.minecraft.core.Holder;
-import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.gameevent.GameEvent;
 
@@ -29,7 +29,7 @@ public abstract class EntityUndyingMixin {
             CallbackInfo ci) {
         Entity entity = (Entity) (Object) this;
         if (gameEvent == GameEvent.ENTITY_DIE
-                && entity instanceof ServerPlayer player
+                && entity instanceof LivingEntity player
                 && CelestweaveArmorUndyingHandler.protectBeforeDeathSideEffect(player)) {
             ci.cancel();
         }
