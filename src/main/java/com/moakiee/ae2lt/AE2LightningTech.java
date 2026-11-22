@@ -48,6 +48,9 @@ import com.moakiee.ae2lt.item.FixedInfiniteCellItem.CellOutcome;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.packs.PackType;
+import net.minecraft.server.packs.repository.Pack;
+import net.minecraft.server.packs.repository.PackSource;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
@@ -102,6 +105,7 @@ import com.moakiee.ae2lt.recipe.RecipeConflictScanner;
 import com.moakiee.ae2lt.logic.tianshu.loop.ClosedLoopPatternDecoder;
 
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.AddPackFindersEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
@@ -303,18 +307,13 @@ public class AE2LightningTech {
                         // 苍穹织雷头部模块
                         output.accept(ModItems.CELESTWEAVE_SUBMODULE_NIGHT_VISION);
                         output.accept(ModItems.CELESTWEAVE_SUBMODULE_WATER_BREATHING);
-                        output.accept(ModItems.CELESTWEAVE_SUBMODULE_SATURATION);
 
                         // 苍穹织雷胸部模块
-                        output.accept(ModItems.CELESTWEAVE_SUBMODULE_REACH_EXTENSION);
                         output.accept(ModItems.CELESTWEAVE_SUBMODULE_MATRIX_SHIELD);
                         output.accept(ModItems.CELESTWEAVE_SUBMODULE_PHASE_SHIELD);
-                        output.accept(ModItems.CELESTWEAVE_SUBMODULE_REFLECT);
                         output.accept(ModItems.CELESTWEAVE_SUBMODULE_OVERLOAD_PROTECTION);
                         output.accept(ModItems.CELESTWEAVE_SUBMODULE_MULTIDIMENSIONAL_PROTECTION);
                         output.accept(ModItems.CELESTWEAVE_SUBMODULE_PURIFICATION);
-                        output.accept(ModItems.CELESTWEAVE_SUBMODULE_RADIATION_PROTECTION);
-                        output.accept(ModItems.CELESTWEAVE_SUBMODULE_LASER_PROTECTION);
                         output.accept(ModItems.CELESTWEAVE_SUBMODULE_PHASE_LOCK);
 
                         // 苍穹织雷腿部模块
@@ -322,13 +321,12 @@ public class AE2LightningTech {
                         output.accept(ModItems.CELESTWEAVE_SUBMODULE_PHASE_FLIGHT);
 
                         // 苍穹织雷足部模块
-                        output.accept(ModItems.CELESTWEAVE_SUBMODULE_DASH);
                         output.accept(ModItems.CELESTWEAVE_SUBMODULE_DIG_AFFINITY);
-                        output.accept(ModItems.CELESTWEAVE_SUBMODULE_MOVEMENT_ASSIST);
 
                         // 电磁炮与模块
                         output.accept(ModItems.ELECTROMAGNETIC_RAILGUN);
-                        output.accept(ModItems.RAILGUN_MODULE_CORE);
+                        output.accept(ModItems.RAILGUN_MODULE_CHARGE);
+                        output.accept(ModItems.MODULE_COMPENSATION);
                         output.accept(ModItems.RAILGUN_MODULE_COMPUTE);
                         output.accept(ModItems.RAILGUN_MODULE_ACCELERATION);
                         output.accept(ModItems.RAILGUN_MODULE_RANGE);
@@ -371,6 +369,13 @@ public class AE2LightningTech {
                     })
                     .build());
 
+    private static void addLegacyModulePack(AddPackFindersEvent event) {
+        var type = event.getPackType();
+        String title = type == PackType.CLIENT_RESOURCES ? "ae2lt.pack.legacy_modules.assets" : "ae2lt.pack.legacy_modules.recipes";
+        event.addPackFinders(ResourceLocation.fromNamespaceAndPath(MODID, "packs/legacy_modules"), type,
+                Component.translatable(title), PackSource.FEATURE, false, Pack.Position.TOP);
+    }
+
     public AE2LightningTech(IEventBus modEventBus, ModContainer modContainer) {
         AE2LTConfigMigration.runIfNeeded();
         WirelessPatternProviderPolicy.setMaxDistanceSupplier(
@@ -379,6 +384,7 @@ public class AE2LightningTech {
         // its built-in terminals by then, so this terminal is appended after them in the
         // universal-terminal selector instead of always occupying the first position.
         modEventBus.addListener(Ae2wtlibIntegration::onRegister);
+        modEventBus.addListener(AE2LightningTech::addLegacyModulePack);
         ModFumos.register();
         LegacyRegistryAliases.register();
         ModBlocks.BLOCKS.register(modEventBus);
@@ -827,6 +833,9 @@ public class AE2LightningTech {
             com.moakiee.thunderbolt.api.crafting.CraftingPlanningEngines.registerExactBackend(
                     com.moakiee.thunderbolt.core.crafting.planner.ThunderboltV2PlanningEngine.ID,
                     com.moakiee.ae2lt.crafting.big.TianshuExactCraftingBackend.INSTANCE);
+            if (net.neoforged.fml.ModList.get().isLoaded("ad_astra")) {
+                com.moakiee.ae2lt.integration.adastra.AdAstraLifeSupport.register();
+            }
             com.moakiee.ae2lt.logic.management.RemoteDeviceLocator.register();
             appeng.api.networking.GridServices.register(
                     com.moakiee.ae2lt.logic.management.NetworkDeviceIndex.class,

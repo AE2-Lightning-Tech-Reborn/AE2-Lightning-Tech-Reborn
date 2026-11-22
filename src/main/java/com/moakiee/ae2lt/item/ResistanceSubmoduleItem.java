@@ -3,6 +3,7 @@ package com.moakiee.ae2lt.item;
 import java.util.List;
 
 import com.moakiee.ae2lt.device.capability.DeviceCapability;
+import com.moakiee.ae2lt.celestweave.module.MekanismProtectionSubmodule;
 import com.moakiee.ae2lt.celestweave.ArmorOverloadRules;
 import com.moakiee.ae2lt.celestweave.ArmorPart;
 import com.moakiee.ae2lt.celestweave.module.ResistanceSubmodule;
@@ -17,6 +18,8 @@ public final class ResistanceSubmoduleItem extends AbstractSingleArmorSubmoduleI
                 ArmorPart.CHEST,
                 submodule,
                 stack -> List.of(
+                        new DeviceCapability.DamageTypeImmunity(MekanismProtectionSubmodule.LASER.damageType()),
+                        ReflectSubmoduleItem.tuning(),
                         new DeviceCapability.StagedMitigation(submodule.id()),
                         new DeviceCapability.PassiveDrain(ArmorOverloadRules.RESISTANCE_PASSIVE_DRAIN_FE)));
     }

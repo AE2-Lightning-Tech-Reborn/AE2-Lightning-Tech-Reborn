@@ -17,6 +17,7 @@ archive/
 docs/
 !docs/
 docs/*
+!docs/celestweave-module-design.zh-CN.md
 !docs/wireless-io-alpha3-test-port.md
 !docs/tianshu-deferred-matrix-returns.md
 !docs/addon-api-alpha.md

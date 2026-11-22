@@ -1,6 +1,8 @@
 package com.moakiee.ae2lt.celestweave;
 
 import java.util.List;
+import com.moakiee.ae2lt.celestweave.module.MekanismProtectionSubmodule;
+import com.moakiee.ae2lt.integration.mekanism.MekanismArmorIntegration;
 import java.util.UUID;
 
 import org.jetbrains.annotations.Nullable;
@@ -165,6 +167,12 @@ public final class CelestweaveArmorUtilityHandler {
     }
 
     private static void tickPurification(LivingEntity player, List<ActiveCapability> capabilities) {
+        if (net.neoforged.fml.ModList.get().isLoaded("mekanism")
+                && capabilities.stream().anyMatch(active ->
+                    active.capability() instanceof DeviceCapability.DamageTypeImmunity immunity
+                    && immunity.damageType().equals(MekanismProtectionSubmodule.RADIATION.damageType()))) {
+            MekanismArmorIntegration.tickRadiationRegeneration(player);
+        }
         for (var active : capabilities) {
             if (!(active.capability() instanceof DeviceCapability.PurificationTuning purification)) {
                 continue;
@@ -233,8 +241,9 @@ public final class CelestweaveArmorUtilityHandler {
             return;
         }
         for (var active : capabilities) {
-            if (active.capability() instanceof DeviceCapability.StagedMitigation staged
-                    && ArmorMitigationRules.extinguishesFire(staged.stage())) {
+            if (active.capability() instanceof DeviceCapability.PurificationTuning
+                    || (active.capability() instanceof DeviceCapability.StagedMitigation staged
+                    && ArmorMitigationRules.extinguishesFire(staged.stage()))) {
                 player.clearFire();
                 player.setRemainingFireTicks(0);
                 return;

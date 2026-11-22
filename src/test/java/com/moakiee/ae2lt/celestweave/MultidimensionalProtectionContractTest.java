@@ -25,7 +25,7 @@ final class MultidimensionalProtectionContractTest {
     void armorInstallationRejectsAnyIntersectingGroupInBothDirections() throws Exception {
         String state = source("src/main/java/com/moakiee/ae2lt/celestweave/CelestweaveArmorState.java");
 
-        assertTrue(state.contains("Set<String> groupIds = resolveSubmoduleGroupIds(candidate)"));
+        assertTrue(state.contains("Set<String> groupIds = resolveSubmoduleGroupIds(part, candidate)"));
         assertTrue(state.contains("groupIds.stream().anyMatch(installedGroups::contains)"));
         assertFalse(state.contains("installedInGroup > installedSameId"));
     }

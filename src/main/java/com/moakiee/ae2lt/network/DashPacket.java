@@ -30,7 +30,7 @@ public record DashPacket() implements CustomPacketPayload {
             if (context.player() instanceof ServerPlayer player) {
                 com.moakiee.ae2lt.celestweave.module.DashSubmodule.applyDash(
                         player,
-                        player.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.FEET));
+                        com.moakiee.ae2lt.celestweave.phase.CelestweaveEquipmentAccess.findArmor(player, net.minecraft.world.entity.EquipmentSlot.FEET));
             }
         });
     }

@@ -56,11 +56,12 @@ public final class MultidimensionalProtectionSubmodule extends AbstractCelestwea
                 Component.translatable("ae2lt.celestweave.config.hit_feedback"),
                 ByteTag.valueOf(isHitFeedbackEnabled(armor)),
                 booleanChoices(),
-                null));
+                null), ReflectSubmodule.shieldConfig(armor));
     }
 
     @Override
     public boolean setConfig(ItemStack armor, String key, @Nullable Tag value) {
+        if (ReflectSubmodule.setShieldConfig(armor, key, value)) return true;
         if (!ResistanceSubmodule.HIT_FEEDBACK_CONFIG_KEY.equals(key)) {
             return false;
         }

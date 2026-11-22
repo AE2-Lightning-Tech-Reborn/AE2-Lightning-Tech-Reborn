@@ -18,6 +18,25 @@ public final class NightVisionSubmodule extends AbstractCelestweaveArmorSubmodul
     private static final int EFFECT_DURATION_TICKS = 1_200;
     private static final int REFRESH_THRESHOLD_TICKS = EFFECT_DURATION_TICKS - 60;
 
+    public static final String NIGHT = "night_vision";
+    public static final String FOG = "remove_fog";
+    public static final String XRAY = "block_xray";
+
+    public boolean option(ItemStack armor, String key) {
+        var options = getOptions(armor);
+        return options.contains(key, net.minecraft.nbt.Tag.TAG_BYTE)
+                ? options.getBoolean(key) : !XRAY.equals(key);
+    }
+
+    @Override
+    public java.util.List<CelestweaveArmorSubmoduleConfig> getConfigs(ItemStack armor) {
+        return java.util.stream.Stream.of(NIGHT, FOG, XRAY).map(key ->
+                config(key, net.minecraft.network.chat.Component.translatable("ae2lt.vision." + key),
+                        net.minecraft.nbt.ByteTag.valueOf(option(armor, key)), booleanChoices(), null)).toList();
+    }
+
+    private static final String GRANTED = "ae2lt_visual_night_vision";
+
     private NightVisionSubmodule() {}
 
     @Override
@@ -47,22 +66,26 @@ public final class NightVisionSubmodule extends AbstractCelestweaveArmorSubmodul
 
     @Override
     public void onActivated(@Nullable LivingEntity player, Dist dist, ItemStack armor) {
-        if (player != null && dist == Dist.DEDICATED_SERVER) {
+        if (player != null && dist == Dist.DEDICATED_SERVER && option(armor, NIGHT)) {
             applyEffect(player);
+            player.getPersistentData().putBoolean(GRANTED, true);
         }
     }
 
     @Override
     public void onDeactivated(@Nullable LivingEntity player, Dist dist, ItemStack armor) {
         if (player != null && dist == Dist.DEDICATED_SERVER) {
-            player.removeEffect(MobEffects.NIGHT_VISION);
+            clearGrantedEffect(player);
         }
     }
 
     @Override
     public int tickActive(@Nullable LivingEntity player, Dist dist, ItemStack armor) {
-        if (player != null && dist == Dist.DEDICATED_SERVER) {
+        if (player != null && dist == Dist.DEDICATED_SERVER && option(armor, NIGHT)) {
             applyEffect(player);
+            player.getPersistentData().putBoolean(GRANTED, true);
+        } else if (player != null && dist == Dist.DEDICATED_SERVER) {
+            clearGrantedEffect(player);
         }
         return 0;
     }
@@ -80,6 +103,13 @@ public final class NightVisionSubmodule extends AbstractCelestweaveArmorSubmodul
     @Override
     public int tickActive(@Nullable Player player, Dist dist, ItemStack armor) {
         return tickActive((LivingEntity) player, dist, armor);
+    }
+
+    private static void clearGrantedEffect(LivingEntity player) {
+        if (player.getPersistentData().getBoolean(GRANTED)) {
+            player.getPersistentData().remove(GRANTED);
+            player.removeEffect(MobEffects.NIGHT_VISION);
+        }
     }
 
     private static void applyEffect(LivingEntity player) {

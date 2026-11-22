@@ -7,6 +7,8 @@ navigation:
 item_ids:
   - ae2lt:electromagnetic_railgun
   - ae2lt:railgun_module_core
+  - ae2lt:railgun_module_charge
+  - ae2lt:module_compensation
   - ae2lt:railgun_module_compute
   - ae2lt:railgun_module_acceleration
   - ae2lt:railgun_module_ehv_beam
@@ -31,7 +33,9 @@ The **Electromagnetic Railgun** is a modular overload weapon. It requires a boun
 Prepare the railgun at the <ItemLink id="ae2lt:overload_device_workbench" />:
 
 * Install an <ItemLink id="ae2lt:ultimate_overload_core" /> in the structural core slot; this is required for railgun operation
-* Install the <ItemLink id="ae2lt:railgun_module_core" /> to enable charged shots and HV compensation for charged shots and EHV beams
+* Install <ItemLink id="ae2lt:railgun_module_charge" /> for charged shots and <ItemLink id="ae2lt:module_compensation" /> for HV compensation.
+
+Loading a railgun with an installed <ItemLink id="ae2lt:railgun_module_core" /> converts it into one Charge Module and one Lightning Compensation Module. You can remove them separately. Loading a Celestweave chestplate converts its old core module into one Lightning Compensation Module.
 
 The workbench binds the railgun to its ME network when the railgun is inserted. The bound network must stay loaded and online. Without an Energy Module, the railgun stores 1,000,000 FE.
 
@@ -55,7 +59,7 @@ Hold use to charge, then release to fire. Releasing before the first charge tier
 
 Charging also drains FE from the railgun buffer each tick: 1,000 / 4,000 / 10,000 FE for EHV1 / EHV2 / EHV3 charge progress. Charged shots have 80% armor bypass, apply electromagnetic paralysis for 2 seconds, and gain 25% damage during thunderstorms when the shooter can see the sky.
 
-Charged shots and EHV beams consume available EHV lightning first. With the core module installed, only the shortfall is compensated at **16 HV = 1 EHV**.
+Charged shots and EHV beams consume available EHV lightning first. With the compensation module installed, only the shortfall is compensated at **16 HV = 1 EHV**.
 
 ## Recoil
 
@@ -88,7 +92,7 @@ Open the Overload Device Hub with the default key G while holding the railgun.
 * **Sound** controls the railgun's local sound effects
 * **Chain Damage** enables chain jumps for both charged shots and the continuous beam; the ordinary beam can start a chain at its endpoint even without a direct entity hit
 * **Execution Method** is shared by both execution modules and cycles through Off, Percentage, Normal Death and Forced Death for Overload; Multidimensional skips Percentage. Off never enters the explicit death/removal chain: Overload Execution instead adds 600 armor-piercing electromagnetic damage, while Multidimensional Execution adds `Float.MAX_VALUE` armor-piercing electromagnetic damage. These ordinary damage calls preserve the target's own damage, death and loot mechanics. The Off fallback has no execution-module surcharge
-* **EHV Beam** appears after installing the module. It consumes available EHV lightning first; with the core module installed, each missing EHV costs 16 HV. Without a core or enough HV, firing stops without downgrading. EHV beams, endpoint glows and chain arcs are pink-white; ordinary HV beams are cyan-white. Compensation preserves EHV color and damage. Server config controls damage and costs; normal beam armor, storm and chain rules still apply
+* **EHV Beam** appears after installing the module. It consumes available EHV lightning first; with the compensation module installed, each missing EHV costs 16 HV. Without compensation or enough HV, firing stops without downgrading. EHV beams, endpoint glows and chain arcs are pink-white; ordinary HV beams are cyan-white. Compensation preserves EHV color and damage. Server config controls damage and costs; normal beam armor, storm and chain rules still apply
 * **Charged Splash** controls landing-point area damage for every charged tier; disabling it keeps direct hits and chains from directly hit targets
 * **Overload Execution range** always includes the direct target, while local-area execution is limited to half of the active charged-splash radius; chain propagation never carries execution
 * The hub also shows module counts, FE storage and bound network status

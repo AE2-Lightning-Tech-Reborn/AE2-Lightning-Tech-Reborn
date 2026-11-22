@@ -7,6 +7,8 @@ navigation:
 item_ids:
   - ae2lt:electromagnetic_railgun
   - ae2lt:railgun_module_core
+  - ae2lt:railgun_module_charge
+  - ae2lt:module_compensation
   - ae2lt:railgun_module_compute
   - ae2lt:railgun_module_acceleration
   - ae2lt:railgun_module_ehv_beam
@@ -31,7 +33,9 @@ item_ids:
 请先在 <ItemLink id="ae2lt:overload_device_workbench" /> 中完成核心装配：
 
 * 核心槽安装 <ItemLink id="ae2lt:ultimate_overload_core" />；这是电磁炮运行的基础核心
-* 安装 <ItemLink id="ae2lt:railgun_module_core" />；它用于蓄力射击，并为蓄力射击和极高压光束启用高压代偿
+* 安装 <ItemLink id="ae2lt:railgun_module_charge" /> 解锁蓄力射击，另装 <ItemLink id="ae2lt:module_compensation" /> 启用高压闪电代偿。
+
+读取旧装备时，电磁炮里的 <ItemLink id="ae2lt:railgun_module_core" /> 自动拆成蓄力和代偿各一个，可以分别卸下。旧胸甲里的过载内核自动转成一个代偿模块。
 
 电磁炮放入接入 ME 网络的过载装备工作站时，会自动绑定到工作站所在网络。绑定点需要保持区块加载并处于在线状态。未安装能量模块时，电磁炮可存储 1,000,000 FE。
 
@@ -55,7 +59,7 @@ item_ids:
 
 蓄力期间也会持续消耗 FE：EHV1 / EHV2 / EHV3 蓄力进度分别默认每 tick 消耗 1,000 / 4,000 / 10,000 FE。蓄力射击拥有 80% 护甲穿透，并会施加 2 秒电磁麻痹。雷暴天气且玩家位于露天下时，伤害提高 25%。
 
-蓄力射击和极高压光束都优先消耗现有极高压闪电；不足的部分由已安装的过载内核模块按 **16 高压闪电 = 1 极高压闪电** 的比例自动代偿。
+蓄力射击和极高压光束都优先消耗现有极高压闪电；不足的部分由已安装的闪电代偿模块按 **16 高压闪电 = 1 极高压闪电** 的比例自动代偿。
 
 ## 后坐力
 

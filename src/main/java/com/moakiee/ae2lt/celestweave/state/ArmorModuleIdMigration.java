@@ -1,12 +1,13 @@
 package com.moakiee.ae2lt.celestweave.state;
 
 import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.List;
+import java.util.Map;
 
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
 import com.moakiee.ae2lt.device.module.OverloadDeviceModuleItem;
+import com.moakiee.ae2lt.registry.ModItems;
 
 /** Migrates persistent module keys as well as the registry alias for their providing item. */
 final class ArmorModuleIdMigration {
@@ -17,6 +18,10 @@ final class ArmorModuleIdMigration {
     }
 
     static List<ItemStack> modules(List<ItemStack> copiedSource) {
+        if (copiedSource.stream().anyMatch(stack -> stack.is(ModItems.RAILGUN_MODULE_CORE.get()))) {
+            copiedSource = copiedSource.stream().map(stack -> stack.is(ModItems.RAILGUN_MODULE_CORE.get())
+                    ? stack.transmuteCopy(ModItems.MODULE_COMPENSATION.get(), stack.getCount()) : stack).toList();
+        }
         if (copiedSource.stream().noneMatch(stack -> NEW_ID.equals(moduleId(stack)))) {
             return copiedSource;
         }

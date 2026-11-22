@@ -31,6 +31,7 @@ import com.moakiee.ae2lt.celestweave.module.CelestweaveArmorSubmoduleItem;
 import com.moakiee.ae2lt.celestweave.phase.CelestweaveEquipmentAccess;
 import com.moakiee.ae2lt.device.module.OverloadDeviceModuleItem;
 import com.moakiee.ae2lt.registry.ModItems;
+import com.moakiee.ae2lt.item.railgun.RailgunModuleType;
 import com.moakiee.ae2lt.registry.ModDataComponents;
 import com.moakiee.ae2lt.celestweave.state.ArmorPersistentData;
 import com.moakiee.ae2lt.celestweave.state.ArmorRuntimeRegistry;
@@ -126,13 +127,13 @@ public final class CelestweaveArmorState {
         if (id.isBlank()) {
             return false;
         }
-        Set<String> groupIds = resolveSubmoduleGroupIds(candidate);
+        Set<String> groupIds = resolveSubmoduleGroupIds(part, candidate);
         if (!groupIds.isEmpty()) {
             for (var installed : loadModuleStacks(armor, registries)) {
                 if (id.equals(resolveSubmoduleId(installed))) {
                     continue;
                 }
-                var installedGroups = resolveSubmoduleGroupIds(installed);
+                var installedGroups = resolveSubmoduleGroupIds(part, installed);
                 if (groupIds.stream().anyMatch(installedGroups::contains)) {
                     return false;
                 }
@@ -582,10 +583,13 @@ public final class CelestweaveArmorState {
                 || !(stack.getItem() instanceof OverloadDeviceModuleItem provider)) {
             return "";
         }
+        if (stack.is(ModItems.RAILGUN_MODULE_CORE.get())) {
+            return RailgunModuleType.COMPENSATION.getSerializedName();
+        }
         return provider.moduleTypeId(stack);
     }
 
-    private static Set<String> resolveSubmoduleGroupIds(ItemStack stack) {
+    private static Set<String> resolveSubmoduleGroupIds(ArmorPart part, ItemStack stack) {
         if (stack != null && !stack.isEmpty() && stack.getItem() instanceof ArmorEnergyModuleItem) {
             return Set.of(ArmorEnergyModuleItem.MODULE_TYPE_ID);
         }
@@ -597,7 +601,7 @@ public final class CelestweaveArmorState {
             return id.isBlank() ? Set.of() : Set.of(id);
         }
         var groups = new HashSet<String>();
-        provider.collectSubmodules(stack, submodule -> {
+        provider.collectSubmodules(part, stack, submodule -> {
             if (submodule != null) {
                 submodule.installGroupIds().stream()
                         .filter(group -> group != null && !group.isBlank())
@@ -617,7 +621,7 @@ public final class CelestweaveArmorState {
             }
             int count = Math.max(1, stack.getCount());
             ItemStack installedStack = stack.copyWithCount(count);
-            provider.collectSubmodules(installedStack, submodule -> {
+            provider.collectSubmodules(armorPart(armor), installedStack, submodule -> {
                 if (submodule != null && !submodule.id().isBlank()) {
                     result.add(new InstalledSubmodule(installedStack, submodule, count));
                 }

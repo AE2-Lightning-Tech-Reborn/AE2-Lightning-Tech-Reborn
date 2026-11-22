@@ -36,20 +36,23 @@ public class RailgunModuleItem extends Item implements OverloadDeviceModuleItem 
 
     static int maxInstallAmount(RailgunModuleType type) {
         return switch (type) {
-            case CORE, OVERLOAD_EXECUTION, MULTIDIMENSIONAL_EXECUTION, EHV_BEAM -> 1;
+            case CORE, CHARGE, COMPENSATION, OVERLOAD_EXECUTION, MULTIDIMENSIONAL_EXECUTION, EHV_BEAM -> 1;
             case COMPUTE, ACCELERATION, RANGE -> 2;
         };
     }
 
     @Override
     public Set<DeviceKind> acceptableDevices() {
+        if (type == RailgunModuleType.COMPENSATION) {
+            return java.util.EnumSet.allOf(DeviceKind.class);
+        }
         return type == RailgunModuleType.CORE ? CORE_ACCEPTS : RAILGUN_ONLY;
     }
 
     @Override
     public DeviceSlotType acceptableSlot() {
         return switch (type) {
-            case CORE -> DeviceSlotType.CORE;
+            case CORE, CHARGE, COMPENSATION -> DeviceSlotType.CORE;
             case COMPUTE -> DeviceSlotType.COMPUTE;
             case ACCELERATION -> DeviceSlotType.ACCELERATION;
             case RANGE -> DeviceSlotType.RANGE;
@@ -64,11 +67,20 @@ public class RailgunModuleItem extends Item implements OverloadDeviceModuleItem 
     }
 
     static boolean accepts(RailgunModuleType type, DeviceKind deviceKind, DeviceSlotType slotType) {
+        if (type == RailgunModuleType.COMPENSATION && deviceKind != DeviceKind.RAILGUN) {
+            return switch (deviceKind) {
+                case CELESTWEAVE_OCULUS -> slotType == DeviceSlotType.HEAD_MODULE;
+                case CELESTWEAVE_CORE -> slotType == DeviceSlotType.CHEST_MODULE;
+                case CELESTWEAVE_CONDUIT -> slotType == DeviceSlotType.LEGS_MODULE;
+                case CELESTWEAVE_STRIDE -> slotType == DeviceSlotType.FEET_MODULE;
+                default -> false;
+            };
+        }
         if (type == RailgunModuleType.CORE && deviceKind == DeviceKind.CELESTWEAVE_CORE) {
             return slotType == DeviceSlotType.CHEST_MODULE;
         }
         return deviceKind == DeviceKind.RAILGUN && slotType == switch (type) {
-            case CORE -> DeviceSlotType.CORE;
+            case CORE, CHARGE, COMPENSATION -> DeviceSlotType.CORE;
             case COMPUTE -> DeviceSlotType.COMPUTE;
             case ACCELERATION -> DeviceSlotType.ACCELERATION;
             case RANGE -> DeviceSlotType.RANGE;
@@ -91,7 +103,7 @@ public class RailgunModuleItem extends Item implements OverloadDeviceModuleItem 
         // Per-stack contribution. Aggregation (count of N modules) is done by services
         // iterating the resolver output — the same way the legacy *Count() helpers worked.
         return switch (type) {
-            case CORE -> List.of(new DeviceCapability.LightningCompensation(
+            case CORE, COMPENSATION -> List.of(new DeviceCapability.LightningCompensation(
                     LightningCompensationPolicy.DEFAULT_HIGH_VOLTAGE_PER_EXTREME_HIGH_VOLTAGE));
             case COMPUTE -> List.of(
                     new DeviceCapability.ChainTuning(2, 1, 0),
@@ -99,7 +111,7 @@ public class RailgunModuleItem extends Item implements OverloadDeviceModuleItem 
             case ACCELERATION -> List.of(new DeviceCapability.AccelerationFactor(0.30D));
             case RANGE -> List.of(new DeviceCapability.RangeMultiplier(2.0D));
             case OVERLOAD_EXECUTION -> List.of(new DeviceCapability.OverloadExecutionTuning(0.02D, 200, 8));
-            case MULTIDIMENSIONAL_EXECUTION, EHV_BEAM -> List.of();
+            case CHARGE, MULTIDIMENSIONAL_EXECUTION, EHV_BEAM -> List.of();
         };
     }
 

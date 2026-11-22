@@ -77,11 +77,12 @@ public final class ResistanceSubmodule extends AbstractCelestweaveArmorSubmodule
 
     @Override
     public List<CelestweaveArmorSubmoduleConfig> getConfigs(ItemStack armor) {
-        return List.of(hitFeedbackConfig(armor));
+        return List.of(hitFeedbackConfig(armor), ReflectSubmodule.shieldConfig(armor));
     }
 
     @Override
     public boolean setConfig(ItemStack armor, String key, @Nullable Tag value) {
+        if (ReflectSubmodule.setShieldConfig(armor, key, value)) return true;
         if (!HIT_FEEDBACK_CONFIG_KEY.equals(key)) {
             return false;
         }

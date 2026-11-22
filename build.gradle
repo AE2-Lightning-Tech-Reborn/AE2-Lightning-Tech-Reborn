@@ -619,6 +619,7 @@ dependencies {
     compileOnly "curse.maven:applied-flux-965012:7429565"
     runtimeOnly "curse.maven:applied-flux-965012:7429565"
     compileOnly "dev.technici4n:GrandPower:3.0.0"
+    compileOnly "curse.maven:ad-astra-635042:8833401"
     compileOnly "mekanism:Mekanism:1.21.1-10.7.19.85"
     // Optional Industrial Foregoing fluid role/side metadata; never bundled.
     compileOnly "curse.maven:titanium-287342:8760562"

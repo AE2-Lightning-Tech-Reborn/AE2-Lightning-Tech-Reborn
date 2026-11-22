@@ -68,6 +68,17 @@ public final class DashSubmodule extends AbstractCelestweaveArmorSubmodule {
         return 0;
     }
 
+    private double distanceMultiplier(ItemStack armor) {
+        return MovementSpeedOption.fromTag(getOptions(armor).get("dash_distance")).multiplier();
+    }
+
+    @Override
+    public java.util.List<CelestweaveArmorSubmoduleConfig> getConfigs(ItemStack armor) {
+        return java.util.List.of(config("dash_distance", Component.translatable("ae2lt.celestweave.config.dash_distance"),
+                MovementSpeedOption.fromTag(getOptions(armor).get("dash_distance")).toTag(),
+                EquipmentTuningSubmodule.multiplierChoices(), null));
+    }
+
     public static void applyDash(ServerPlayer player, ItemStack armor) {
         var sub = INSTANCE;
         if (!sub.isActive(armor)) return;
@@ -82,12 +93,13 @@ public final class DashSubmodule extends AbstractCelestweaveArmorSubmodule {
             return;
         }
         var look = player.getLookAngle();
+        double impulse = IMPULSE * sub.distanceMultiplier(armor);
         PhaseFlightMovementGuard.runAsSelfMovement(
                 player,
                 () -> player.setDeltaMovement(
-                        player.getDeltaMovement().x + look.x * IMPULSE,
+                        player.getDeltaMovement().x + look.x * impulse,
                         Math.max(player.getDeltaMovement().y, 0.0D) + 0.3D,
-                        player.getDeltaMovement().z + look.z * IMPULSE));
+                        player.getDeltaMovement().z + look.z * impulse));
         player.hurtMarked = true;
         player.resetFallDistance();
         setCooldown(armor, player, COOLDOWN_TICKS);

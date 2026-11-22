@@ -51,5 +51,13 @@ public interface CelestweaveArmorSubmoduleItem extends OverloadDeviceModuleItem 
         return List.of();
     }
 
+    default void collectSubmodules(ArmorPart part, ItemStack stack, Consumer<CelestweaveArmorSubmodule> output) {
+        collectSubmodules(stack, output);
+    }
+
+    default List<DeviceCapability> armorCapabilities(ArmorPart part, ItemStack stack) {
+        return capabilities(stack);
+    }
+
     void collectSubmodules(ItemStack stack, Consumer<CelestweaveArmorSubmodule> output);
 }

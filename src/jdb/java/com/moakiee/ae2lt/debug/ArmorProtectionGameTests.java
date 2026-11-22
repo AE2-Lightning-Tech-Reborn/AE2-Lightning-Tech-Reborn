@@ -17,6 +17,8 @@ import com.moakiee.ae2lt.celestweave.service.ArmorCapabilityCollector;
 import com.moakiee.ae2lt.celestweave.service.ArmorTickService;
 import com.moakiee.ae2lt.device.network.ArmorNetworkBinding;
 import com.moakiee.ae2lt.me.key.LightningKey;
+import com.moakiee.ae2lt.item.railgun.RailgunModuleStorage;
+import com.moakiee.ae2lt.item.railgun.RailgunStructuralCore;
 import com.moakiee.ae2lt.registry.ModDataComponents;
 import com.moakiee.ae2lt.registry.ModItems;
 import com.mojang.authlib.GameProfile;
@@ -385,6 +387,117 @@ public final class ArmorProtectionGameTests {
         com.moakiee.ae2lt.item.ResearchNoteItem.applyGeneratedState(note, migrated);
         require(!note.get(DataComponents.CUSTOM_DATA).copyTag().toString().contains("module_undying"),
                 "reopening the note did not save canonical IDs");
+        h.succeed();
+    }
+
+    @GameTest(templateNamespace = "ae2lt", template = "workstation_test")
+    public static void installedCoreSplitsExactlyOnce(GameTestHelper h) {
+        var registries = h.getLevel().registryAccess();
+        var old = new ItemStack(ModItems.RAILGUN_MODULE_CORE.get());
+        old.set(DataComponents.CUSTOM_NAME, Component.literal("legacy"));
+        var gun = new ItemStack(ModItems.ELECTROMAGNETIC_RAILGUN.get());
+        RailgunStructuralCore.setCore(gun, new ItemStack(ModItems.ULTIMATE_OVERLOAD_CORE.get()));
+        var gunTag = (CompoundTag) gun.save(registries);
+        var entries = new ListTag();
+        entries.add(old.save(registries));
+        gunTag.getCompound("components").put("ae2lt:railgun_module_entries", entries);
+        gun = ItemStack.parse(registries, gunTag).orElseThrow();
+        var storage = RailgunModuleStorage.INSTANCE;
+        require(storage.getCount(gun, "charge") == 1 && storage.getCount(gun, "compensation") == 1
+                && RailgunStructuralCore.hasCore(gun), "legacy railgun lost modules or structural core");
+        require(!storage.installOne(gun, old), "installed a second legacy core");
+        var migratedGun = gun.save(registries);
+        gun = ItemStack.parse(registries, migratedGun).orElseThrow();
+        require(migratedGun.equals(gun.save(registries)), "railgun migration was not idempotent");
+        var compensation = storage.uninstallOne(gun, "compensation");
+        require(ItemStack.isSameItemSameComponents(compensation, old.transmuteCopy(ModItems.MODULE_COMPENSATION.get(), 1)),
+                "compensation components changed");
+        require(RailgunModuleStorage.entryData(gun).hasCore() && storage.capabilities(gun).isEmpty(),
+                "charge alone must unlock charging without compensation");
+        var charge = storage.uninstallOne(gun, "charge");
+        require(ItemStack.isSameItemSameComponents(charge, old.transmuteCopy(ModItems.RAILGUN_MODULE_CHARGE.get(), 1)),
+                "charge components changed");
+        require(storage.installOne(gun, compensation) && !RailgunModuleStorage.entryData(gun).hasCore(),
+                "compensation alone unlocked charging");
+
+        var chest = armor(h, ModItems.MODULE_COMPENSATION.get());
+        var chestTag = (CompoundTag) chest.save(registries);
+        var modules = chestTag.getCompound("components").getCompound("ae2lt:celestweave_modules").getList("modules", 10);
+        modules.set(1, old.save(registries));
+        chest = ItemStack.parse(registries, chestTag).orElseThrow();
+        require(CelestweaveArmorState.getInstalledAmount(chest, registries, "compensation") == 1
+                && CelestweaveArmorState.getInstalledAmount(chest, registries, "charge") == 0, "old chest core split incorrectly");
+        require(!CelestweaveArmorState.installOneModule(chest, registries, old), "legacy item bypassed chest module limit");
+        var migratedChest = chest.save(registries);
+        chest = ItemStack.parse(registries, migratedChest).orElseThrow();
+        require(migratedChest.equals(chest.save(registries)), "chest migration was not idempotent");
+        require(ItemStack.isSameItemSameComponents(CelestweaveArmorState.uninstallOneModule(chest, registries, "compensation"),
+                compensation), "chest compensation components changed");
+        h.succeed();
+    }
+
+    @GameTest(templateNamespace = "ae2lt", template = "workstation_test")
+    public static void sharedModulesResolveForEachArmorPart(GameTestHelper h) {
+        var registries = h.getLevel().registryAccess();
+        for (var armorItem : List.of(ModItems.CELESTWEAVE_CORE.get(), ModItems.CELESTWEAVE_CONDUIT.get(), ModItems.CELESTWEAVE_STRIDE.get())) {
+            var device = new ItemStack(armorItem);
+            CelestweaveArmorState.setSlot(device, registries, CelestweaveArmorState.SLOT_CORE, new ItemStack(ModItems.ULTIMATE_OVERLOAD_CORE.get()));
+            for (var item : List.of(ModItems.RAILGUN_MODULE_ACCELERATION.get(), ModItems.RAILGUN_MODULE_RANGE.get())) {
+                require(CelestweaveArmorState.installOneModule(device, registries, new ItemStack(item)), "shared module refused");
+                require(!CelestweaveArmorState.canInstallModule(device, registries, new ItemStack(item)), "duplicate armor module accepted");
+            }
+            var ids = CelestweaveArmorState.collectSubmodules(device, registries).stream().map(m -> m.id()).toList();
+            var distance = switch (CelestweaveArmorState.armorPart(device)) {
+                case CHEST -> "reach_extension";
+                case LEGS -> "range";
+                case FEET -> "dash";
+                default -> throw new IllegalStateException();
+            };
+            require(ids.equals(List.of("acceleration", distance)), "unexpected module controls: " + ids);
+        }
+        h.succeed();
+    }
+
+    @GameTest(templateNamespace = "ae2lt", template = "workstation_test")
+    public static void lifeSupportProtectsOnlyItsWearer(GameTestHelper h) {
+        if (!net.neoforged.fml.ModList.get().isLoaded("ad_astra")) {
+            h.succeed();
+            return;
+        }
+        var player = FakePlayerFactory.get(h.getLevel(), new GameProfile(UUID.randomUUID(), "LifeTest"));
+        var registries = h.getLevel().registryAccess();
+        var helmet = new ItemStack(ModItems.CELESTWEAVE_OCULUS.get());
+        CelestweaveArmorState.setSlot(helmet, registries, CelestweaveArmorState.SLOT_CORE,
+                new ItemStack(ModItems.ULTIMATE_OVERLOAD_CORE.get()));
+        require(CelestweaveArmorState.installOneModule(helmet, registries,
+                new ItemStack(ModItems.CELESTWEAVE_SUBMODULE_WATER_BREATHING.get())), "life support refused");
+        player.setItemSlot(EquipmentSlot.HEAD, helmet);
+        CelestweaveArmorState.syncSubmoduleActiveState(player, helmet, registries, true, Dist.DEDICATED_SERVER);
+        require(earth.terrarium.adastra.api.events.AdAstraEvents.EntityOxygenEvent.fire(player, false), "no personal oxygen");
+        require(!earth.terrarium.adastra.api.events.AdAstraEvents.ColdTemperatureTickEvent.fire(h.getLevel(), player), "cold passed through");
+        require(!earth.terrarium.adastra.api.events.AdAstraEvents.HotTemperatureTickEvent.fire(h.getLevel(), player), "heat passed through");
+        CelestweaveArmorState.syncSubmoduleActiveState(player, helmet, registries, false, Dist.DEDICATED_SERVER);
+        require(!earth.terrarium.adastra.api.events.AdAstraEvents.EntityOxygenEvent.fire(player, false), "oxygen persisted");
+        h.succeed();
+    }
+
+    @GameTest(templateNamespace = "ae2lt", template = "workstation_test")
+    public static void shieldAndPurificationExposeMekanismCapabilities(GameTestHelper h) {
+        if (!net.neoforged.fml.ModList.get().isLoaded("mekanism")) {
+            h.succeed();
+            return;
+        }
+        var shield = armor(h, ModItems.CELESTWEAVE_SUBMODULE_PHASE_SHIELD.get());
+        var player = equip(h, shield);
+        var laser = shield.getCapability(mekanism.common.capabilities.Capabilities.LASER_DISSIPATION);
+        require(laser != null && laser.getDissipationPercent() == 1.0, "phase failed to absorb full beam");
+        ArmorEnergyBuffer.write(shield, h.getLevel().registryAccess(), 0L);
+        com.moakiee.ae2lt.integration.mekanism.MekanismArmorIntegration.absorbLaserEnergy(laser, player, 10000, 1);
+        require(ArmorEnergyBuffer.read(shield) > 0L, "phase absorption did not charge armor");
+        var purify = armor(h, ModItems.CELESTWEAVE_SUBMODULE_PURIFICATION.get());
+        equip(h, purify);
+        var radiation = purify.getCapability(mekanism.common.capabilities.Capabilities.RADIATION_SHIELDING);
+        require(radiation != null && radiation.getRadiationShielding() == 1.0, "purification failed to shield radiation");
         h.succeed();
     }
 

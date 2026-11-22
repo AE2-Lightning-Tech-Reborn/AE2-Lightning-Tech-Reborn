@@ -39,6 +39,8 @@ allprojects {
                 }
                 def options = new File(clientDirectory, 'options.txt')
                 if (!options.isFile()) options.setText('onboardAccessibility:false\npauseOnLostFocus:false\nrenderDistance:4\nsimulationDistance:5\nmaxFps:60\ntutorialStep:none\n', 'UTF-8')
+                new File(clientDirectory, 'config').mkdirs()
+                new File(clientDirectory, 'config/ae2lt-vision.properties').setText('minecraft\\:diamond_block=ff00ff\n', 'UTF-8')
                 report.setText('NIGHT_VISION_CLIENT_RUNNING\n', 'UTF-8')
             }
             doLast {

@@ -8,6 +8,7 @@ import com.moakiee.ae2lt.celestweave.ArmorPart;
 import com.moakiee.ae2lt.celestweave.module.WaterBreathingSubmodule;
 
 import net.minecraft.world.effect.MobEffects;
+import com.moakiee.ae2lt.config.AE2LTCommonConfig;
 
 public final class WaterBreathingSubmoduleItem extends AbstractSingleArmorSubmoduleItem {
 
@@ -18,6 +19,8 @@ public final class WaterBreathingSubmoduleItem extends AbstractSingleArmorSubmod
                 WaterBreathingSubmodule.INSTANCE,
                 stack -> List.of(
                         new DeviceCapability.StatusEffectGrant(MobEffects.WATER_BREATHING, 0),
-                        new DeviceCapability.PassiveDrain(ArmorOverloadRules.WATER_BREATHING_PASSIVE_DRAIN_FE)));
+                        new DeviceCapability.FoodSustain(20, 20.0F, AE2LTCommonConfig.overloadArmorSaturationCheckIntervalTicks()),
+                        new DeviceCapability.PassiveDrain(ArmorOverloadRules.WATER_BREATHING_PASSIVE_DRAIN_FE
+                                + ArmorOverloadRules.SATURATION_PASSIVE_DRAIN_FE)));
     }
 }

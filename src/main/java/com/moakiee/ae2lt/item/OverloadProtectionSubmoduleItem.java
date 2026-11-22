@@ -15,6 +15,7 @@ public final class OverloadProtectionSubmoduleItem extends AbstractSingleArmorSu
                 ArmorPart.CHEST,
                 OverloadProtectionSubmodule.INSTANCE,
                 stack -> List.of(
+                        ReflectSubmoduleItem.tuning(),
                         new DeviceCapability.StagedMitigation(OverloadProtectionSubmodule.ID),
                         new DeviceCapability.LastStandTuning(
                                 ArmorOverloadRules.UNDYING_TRIGGER_COST_FE, 0),

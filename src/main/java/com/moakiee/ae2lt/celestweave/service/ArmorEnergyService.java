@@ -361,7 +361,9 @@ public final class ArmorEnergyService {
             if (!chargedStacks.add(module)) {
                 continue;
             }
-            List<DeviceCapability> capabilities = provider.capabilities(module);
+            List<DeviceCapability> capabilities = provider instanceof com.moakiee.ae2lt.celestweave.module.CelestweaveArmorSubmoduleItem armorModule
+                    ? armorModule.armorCapabilities(CelestweaveArmorState.armorPart(armor), module)
+                    : provider.capabilities(module);
             boolean movingFlight = hasFlightMode(capabilities) && isMovingInFlight(player);
             boolean phaseTraversalActive = hasPhaseTraversal(capabilities)
                     && player instanceof Player realPlayer

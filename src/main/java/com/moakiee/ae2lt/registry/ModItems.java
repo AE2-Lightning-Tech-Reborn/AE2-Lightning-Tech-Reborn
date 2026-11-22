@@ -501,6 +501,13 @@ public final class ModItems {
                     new Item.Properties().stacksTo(16).rarity(Rarity.RARE),
                     RailgunModuleType.CORE));
 
+    public static final DeferredItem<RailgunModuleItem> RAILGUN_MODULE_CHARGE = ITEMS.registerItem(
+            "railgun_module_charge", properties -> new RailgunModuleItem(properties, RailgunModuleType.CHARGE),
+            new Item.Properties().stacksTo(16).rarity(Rarity.RARE));
+    public static final DeferredItem<RailgunModuleItem> MODULE_COMPENSATION = ITEMS.registerItem(
+            "module_compensation", properties -> new RailgunModuleItem(properties, RailgunModuleType.COMPENSATION),
+            new Item.Properties().stacksTo(16).rarity(Rarity.RARE));
+
     public static final DeferredItem<RailgunModuleItem> RAILGUN_MODULE_COMPUTE = ITEMS.register(
             "railgun_module_compute",
             () -> new RailgunModuleItem(
@@ -509,7 +516,7 @@ public final class ModItems {
 
     public static final DeferredItem<RailgunModuleItem> RAILGUN_MODULE_ACCELERATION = ITEMS.register(
             "railgun_module_acceleration",
-            () -> new RailgunModuleItem(
+            () -> new com.moakiee.ae2lt.item.railgun.SharedEquipmentModuleItem(
                     new Item.Properties().stacksTo(16).rarity(Rarity.RARE),
                     RailgunModuleType.ACCELERATION));
 
@@ -521,7 +528,7 @@ public final class ModItems {
 
     public static final DeferredItem<RailgunModuleItem> RAILGUN_MODULE_RANGE = ITEMS.register(
             "railgun_module_range",
-            () -> new RailgunModuleItem(
+            () -> new com.moakiee.ae2lt.item.railgun.SharedEquipmentModuleItem(
                     new Item.Properties().stacksTo(16).rarity(Rarity.RARE),
                     RailgunModuleType.RANGE));
 

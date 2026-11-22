@@ -38,15 +38,13 @@ final class MekanismProtectionContractTest {
     }
 
     @Test
-    void mekanismRecipesAreConditionedOnMekanism() throws Exception {
-        for (String module : new String[]{"radiation", "laser"}) {
-            String recipe = Files.readString(Path.of(
-                    "src/main/resources/data/ae2lt/recipe/lightning_assembly/module_"
-                            + module
-                            + "_protection.json"));
-            assertTrue(recipe.contains("\"type\": \"neoforge:mod_loaded\""));
-            assertTrue(recipe.contains("\"modid\": \"mekanism\""));
+    void consolidatedArmorRecipesWorkWithoutMekanism() throws Exception {
+        Path recipes = Path.of("src/main/resources/data/ae2lt/recipe/lightning_assembly");
+        for (String name : new String[]{"module_purification", "module_matrix_shield", "module_phase_shield"}) {
+            assertFalse(Files.readString(recipes.resolve(name + ".json")).contains("mekanism:"));
         }
+        assertFalse(Files.exists(recipes.resolve("module_radiation_protection.json")));
+        assertFalse(Files.exists(recipes.resolve("module_laser_protection.json")));
     }
 
     @Test
@@ -69,7 +67,7 @@ final class MekanismProtectionContractTest {
 
         assertTrue(integration.contains("float healthBefore = player.getHealth()"));
         assertTrue(integration.contains("player.getHealth() > healthBefore"));
-        assertTrue(integration.contains("CelestweaveAdvancementService.awardRadiationAssimilation(player)"));
+        assertTrue(integration.contains("CelestweaveAdvancementService.awardRadiationAssimilation(serverPlayer)"));
         assertTrue(advancement.contains("\"trigger\": \"minecraft:impossible\""));
         assertTrue(advancement.contains("\"frame\": \"challenge\""));
         assertTrue(advancement.contains("\"hidden\": true"));

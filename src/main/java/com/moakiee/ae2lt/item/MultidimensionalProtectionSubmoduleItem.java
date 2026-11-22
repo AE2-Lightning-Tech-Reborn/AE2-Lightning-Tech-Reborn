@@ -17,6 +17,7 @@ public final class MultidimensionalProtectionSubmoduleItem extends AbstractSingl
                 ArmorPart.CHEST,
                 MultidimensionalProtectionSubmodule.INSTANCE,
                 stack -> List.of(
+                        ReflectSubmoduleItem.tuning(),
                         new DeviceCapability.StagedMitigation(MultidimensionalProtectionSubmodule.ID),
                         new DeviceCapability.LastStandTuning(0L, 0)));
     }

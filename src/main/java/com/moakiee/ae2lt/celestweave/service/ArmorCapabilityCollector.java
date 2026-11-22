@@ -81,11 +81,11 @@ public final class ArmorCapabilityCollector {
                         }
                         continue;
                     }
-                    submoduleProvider.collectSubmodules(unit, submodule -> {
+                    submoduleProvider.collectSubmodules(armorPart, unit, submodule -> {
                         if (submodule == null || !isSubmoduleActiveForSide(player, armor, submodule)) {
                             return;
                         }
-                        for (var capability : module.capabilities(unit)) {
+                        for (var capability : submoduleProvider.armorCapabilities(armorPart, unit)) {
                             out.add(new ActiveCapability(armor, submodule.id(), capability));
                         }
                     });

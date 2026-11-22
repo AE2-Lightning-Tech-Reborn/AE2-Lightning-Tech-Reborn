@@ -157,6 +157,7 @@ public final class CelestweaveArmorDamageHandler {
                 || source.is(DamageTypes.ON_FIRE)
                 || source.is(DamageTypes.LAVA)
                 || source.is(DamageTypes.HOT_FLOOR)
+                || source.is(DamageTypes.FLY_INTO_WALL)
                 || source.is(DamageTypes.IN_WALL)
                 || source.is(DamageTypes.CRAMMING)
                 || source.is(DamageTypes.CACTUS)
@@ -297,13 +298,18 @@ public final class CelestweaveArmorDamageHandler {
             return 0.0F;
         }
         float reflected = 0.0F;
+        boolean usedBuiltin = false;
         for (var active : ArmorCapabilityCollector.collectPerInstalledUnit(player)) {
             if (!(active.capability() instanceof DeviceCapability.ReflectTuning reflect)
                     || reflect.reflectPct() <= 0.0D) {
                 continue;
             }
-            float remaining = Math.max(0.0F, damage - reflected);
-            float amount = Math.min(remaining, damage * (float) reflect.reflectPct());
+            boolean builtin = "reflect".equals(active.submoduleId()) || ArmorMitigationRules.priority(active.submoduleId()) > 0;
+            if (builtin && (usedBuiltin || !CelestweaveArmorState.isSubmoduleEnabled(active.armor(), "reflect", true))) {
+                continue;
+            }
+            if (builtin) usedBuiltin = true;
+            float amount = Math.min(damage - reflected, damage * (float) reflect.reflectPct());
             if (amount <= 0.0F) {
                 continue;
             }
@@ -317,9 +323,7 @@ public final class CelestweaveArmorDamageHandler {
                 continue;
             }
             reflected += amount;
-            if (reflected >= damage) {
-                break;
-            }
+            if (reflected >= damage) break;
         }
         return reflected;
     }

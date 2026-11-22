@@ -17,6 +17,8 @@ import mekanism.common.util.UnitDisplayUtils;
 import com.moakiee.ae2lt.celestweave.MekanismProtectionRules;
 import com.moakiee.ae2lt.celestweave.CelestweaveArmorState;
 import com.moakiee.ae2lt.celestweave.module.MekanismProtectionSubmodule;
+import com.moakiee.ae2lt.celestweave.module.PurificationSubmodule;
+import com.moakiee.ae2lt.celestweave.module.ResistanceSubmodule;
 import com.moakiee.ae2lt.celestweave.phase.CelestweaveEquipmentAccess;
 import com.moakiee.ae2lt.celestweave.service.CelestweaveAdvancementService;
 import com.moakiee.ae2lt.celestweave.service.ArmorEnergyService;
@@ -58,18 +60,25 @@ public final class MekanismArmorIntegration {
     public static void registerCapabilities(RegisterCapabilitiesEvent event) {
         event.registerItem(
                 Capabilities.RADIATION_SHIELDING,
-                (stack, context) -> isProtectionActive(stack, MekanismProtectionSubmodule.RADIATION.id())
+                (stack, context) -> (isProtectionActive(stack, PurificationSubmodule.INSTANCE.id())
+                        || isProtectionActive(stack, MekanismProtectionSubmodule.RADIATION.id()))
                         ? FULL_RADIATION_SHIELDING
                         : null,
                 ModItems.CELESTWEAVE_CORE.get(),
                 ModItems.PHASE_LOCK_PROJECTION.get());
         event.registerItem(
                 Capabilities.LASER_DISSIPATION,
-                (stack, context) -> isProtectionActive(stack, MekanismProtectionSubmodule.LASER.id())
+                (stack, context) -> hasLaserProtection(stack)
                         ? FULL_LASER_DISSIPATION
                         : null,
                 ModItems.CELESTWEAVE_CORE.get(),
                 ModItems.PHASE_LOCK_PROJECTION.get());
+    }
+
+    private static boolean hasLaserProtection(ItemStack stack) {
+        return isProtectionActive(stack, ResistanceSubmodule.T1.id())
+                || isProtectionActive(stack, ResistanceSubmodule.T2.id())
+                || isProtectionActive(stack, MekanismProtectionSubmodule.LASER.id());
     }
 
     static boolean isProtectionActive(ItemStack stack, String submoduleId) {
@@ -112,10 +121,7 @@ public final class MekanismArmorIntegration {
             return;
         }
         ItemStack chest = CelestweaveEquipmentAccess.findArmor(target, EquipmentSlot.CHEST);
-        if (chest.isEmpty()
-                || !CelestweaveArmorState.isSubmoduleRuntimeActive(
-                        chest,
-                        MekanismProtectionSubmodule.LASER.id())) {
+        if (chest.isEmpty() || !hasLaserProtection(chest)) {
             return;
         }
         long absorbedJoules = MekanismProtectionRules.absorbedJoules(
@@ -124,6 +130,11 @@ public final class MekanismArmorIntegration {
         long forgeEnergy = MekanismProtectionRules.joulesToForgeEnergy(
                 absorbedJoules,
                 UnitDisplayUtils.EnergyUnit.FORGE_ENERGY.getConversion());
+        if (isProtectionActive(chest, ResistanceSubmodule.T2.id())
+                && !isProtectionActive(chest, MekanismProtectionSubmodule.LASER.id())) {
+            int percent = com.moakiee.ae2lt.config.AE2LTCommonConfig.phaseShieldLaserRecoveryPercent();
+            forgeEnergy = (forgeEnergy / 100) * percent + (forgeEnergy % 100) * percent / 100;
+        }
         ArmorEnergyService.receiveExternalEnergy(target, chest, forgeEnergy);
     }
 }

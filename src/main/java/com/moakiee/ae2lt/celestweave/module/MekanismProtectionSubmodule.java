@@ -1,18 +1,9 @@
 package com.moakiee.ae2lt.celestweave.module;
 
-import org.jetbrains.annotations.Nullable;
-
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.damagesource.DamageType;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.item.ItemStack;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.fml.ModList;
-
-import com.moakiee.ae2lt.integration.mekanism.MekanismArmorIntegration;
 
 /**
  * Optional Mekanism-specific protection installed in the Celestweave chestplate.
@@ -80,19 +71,4 @@ public final class MekanismProtectionSubmodule extends AbstractCelestweaveArmorS
         return 1;
     }
 
-    @Override
-    public int tickActive(@Nullable Player player, Dist dist, ItemStack armor) {
-        return tickActive((LivingEntity) player, dist, armor);
-    }
-
-    @Override
-    public int tickActive(@Nullable LivingEntity player, Dist dist, ItemStack armor) {
-        if (this == RADIATION
-                && dist == Dist.DEDICATED_SERVER
-                && player != null && !player.level().isClientSide()
-                && ModList.get().isLoaded("mekanism")) {
-            MekanismArmorIntegration.tickRadiationRegeneration(player);
-        }
-        return 0;
-    }
 }

@@ -77,7 +77,7 @@ public record DeviceStatusModel(
                 continue;
             }
             int count = Math.max(1, stack.getCount());
-            provider.collectSubmodules(stack, sub -> {
+            provider.collectSubmodules(armorItem.armorPart(), stack, sub -> {
                 boolean enabled = CelestweaveArmorState.isSubmoduleEnabled(armor, sub);
                 modules.add(new ModuleInfo(sub.nameKey(), count, enabled));
             });
@@ -119,7 +119,13 @@ public record DeviceStatusModel(
         boolean hasStructuralCore = RailgunStructuralCore.hasCore(railgun);
         List<ModuleInfo> modules = new ArrayList<>();
         if (entries.hasCore()) {
-            modules.add(new ModuleInfo("ae2lt.device_hub.module.railgun.core", 1, true));
+            modules.add(new ModuleInfo("item.ae2lt.railgun_module_charge", 1, true));
+        }
+        if (entries.getCount("compensation") > 0) {
+            modules.add(new ModuleInfo("item.ae2lt.module_compensation", 1, true));
+        }
+        if (entries.getCount("range") > 0) {
+            modules.add(new ModuleInfo("item.ae2lt.railgun_module_range", entries.getCount("range"), true));
         }
         if (entries.computeCount() > 0) {
             modules.add(new ModuleInfo(

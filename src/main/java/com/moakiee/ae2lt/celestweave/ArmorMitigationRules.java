@@ -58,7 +58,7 @@ public final class ArmorMitigationRules {
     }
 
     public static boolean extinguishesFire(String stage) {
-        return "matrix_shield".equals(stage) || "overload_protection".equals(stage)
+        return "overload_protection".equals(stage)
                 || "multidimensional_protection".equals(stage);
     }
 

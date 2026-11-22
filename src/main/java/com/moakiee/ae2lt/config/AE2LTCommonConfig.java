@@ -263,6 +263,8 @@ public final class AE2LTCommonConfig {
         return VALUES.pigmeeFumoGiftOnFirstJoin.get();
     }
 
+    public static int lifeSupportHealingIntervalTicks() { return VALUES.lifeSupportHealingIntervalTicks.get(); }
+    public static int phaseShieldLaserRecoveryPercent() { return VALUES.phaseShieldLaserRecoveryPercent.get(); }
     public static int overloadArmorPurificationPeriodTicks() { return VALUES.overloadArmorPurificationPeriodTicks.get(); }
     public static boolean overloadArmorPurificationBeneficialEffects() { return VALUES.overloadArmorPurificationBeneficialEffects.get(); }
     public static boolean overloadArmorPurificationNeutralEffects() { return VALUES.overloadArmorPurificationNeutralEffects.get(); }
@@ -397,6 +399,8 @@ public final class AE2LTCommonConfig {
         private final ModConfigSpec.IntValue frequencyCardInvalidCleanupRequiredChecks;
         private final ModConfigSpec.IntValue frequencyCardCleanupBatchSize;
 
+        private final ModConfigSpec.IntValue lifeSupportHealingIntervalTicks;
+        private final ModConfigSpec.IntValue phaseShieldLaserRecoveryPercent;
         private final ModConfigSpec.IntValue overloadArmorPurificationPeriodTicks;
         private final ModConfigSpec.BooleanValue overloadArmorPurificationBeneficialEffects;
         private final ModConfigSpec.BooleanValue overloadArmorPurificationNeutralEffects;
@@ -664,6 +668,9 @@ public final class AE2LTCommonConfig {
             builder.pop();
 
             builder.push("defense");
+            phaseShieldLaserRecoveryPercent = builder
+                    .comment("Percentage of absorbed Mekanism laser energy recovered by a phase shield.")
+                    .defineInRange("phaseShieldLaserRecoveryPercent", 100, 0, 100);
             overloadArmorPurificationPeriodTicks = builder
                     .comment("Ticks between automatic status effect purification attempts.")
                     .defineInRange("purificationPeriodTicks", 40, 1, 20 * 60 * 60);
@@ -679,6 +686,9 @@ public final class AE2LTCommonConfig {
             builder.pop();
 
             builder.push("utility");
+            lifeSupportHealingIntervalTicks = builder
+                    .comment("Ticks between restoring one health point with Life Support. Zero disables direct healing.")
+                    .defineInRange("lifeSupportHealingIntervalTicks", 0, 0, 20 * 60 * 60);
             overloadArmorSaturationCheckIntervalTicks = builder
                     .comment("Ticks between saturation sustain checks.")
                     .defineInRange("saturationCheckIntervalTicks", 20, 1, 20 * 60 * 60);

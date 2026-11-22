@@ -21,6 +21,7 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
 /** Opt-in real client packet/countdown/renderer regression; uses only its isolated QA world. */
 @EventBusSubscriber(modid = "ae2lt", value = Dist.CLIENT)
 public final class NightVisionClientProbe {
+    private static int outlinePixels;
     private static int phase, ticks, phaseTicks, samples, initialDuration, minimumDuration = Integer.MAX_VALUE;
     private static float minimumScale = 1;
     private static boolean done;
@@ -54,6 +55,20 @@ public final class NightVisionClientProbe {
                     require(CelestweaveArmorState.installOneModule(helmet, registries,
                             new ItemStack(ModItems.CELESTWEAVE_SUBMODULE_NIGHT_VISION.get())), "night vision rejected");
                     ArmorEnergyBuffer.write(helmet, registries, 20_000_000_000L);
+                    NightVisionSubmodule.INSTANCE.setConfig(helmet, NightVisionSubmodule.XRAY, net.minecraft.nbt.ByteTag.valueOf(true));
+                    player.teleportTo(8.5, 160, 8.5);
+                    player.connection.teleport(8.5, 160, 8.5, 0, 0);
+                    var level = player.serverLevel();
+                    for (int x = 5; x <= 11; x++) {
+                        for (int y = 159; y <= 164; y++) {
+                            level.setBlockAndUpdate(new net.minecraft.core.BlockPos(x, y, 12),
+                                    net.minecraft.world.level.block.Blocks.STONE.defaultBlockState());
+                        }
+                    }
+                    level.setBlockAndUpdate(new net.minecraft.core.BlockPos(8, 161, 15),
+                            net.minecraft.world.level.block.Blocks.DIAMOND_BLOCK.defaultBlockState());
+                    level.setBlockAndUpdate(new net.minecraft.core.BlockPos(8, 159, 8),
+                            net.minecraft.world.level.block.Blocks.STONE.defaultBlockState());
                     player.setItemSlot(EquipmentSlot.HEAD, helmet);
                     player.inventoryMenu.broadcastChanges();
                 });
@@ -62,6 +77,16 @@ public final class NightVisionClientProbe {
             }
             if (phase == 1) {
                 if (pending || !mc.player.hasEffect(MobEffects.NIGHT_VISION)) return;
+                if (ticks % 10 != 0) return;
+                outlinePixels = countOutlinePixels(mc);
+                if (outlinePixels < 5) return;
+                for (var effect : java.util.List.of(MobEffects.BLINDNESS, MobEffects.DARKNESS)) {
+                    mc.player.addEffect(new net.minecraft.world.effect.MobEffectInstance(effect, 20));
+                    require(!com.moakiee.ae2lt.client.vision.VisualEnhancement.canRender(NightVisionSubmodule.XRAY)
+                            && !com.moakiee.ae2lt.client.vision.VisualEnhancement.canRender(NightVisionSubmodule.FOG),
+                            "visual enhancement bypassed " + effect);
+                    mc.player.removeEffect(effect);
+                }
                 initialDuration = mc.player.getEffect(MobEffects.NIGHT_VISION).getDuration();
                 // Deliberately pause ONLY the server thread, leaving the real client clock running.
                 onServer(() -> {
@@ -110,6 +135,20 @@ public final class NightVisionClientProbe {
         }
     }
 
+    private static int countOutlinePixels(Minecraft client) {
+        try (var image = net.minecraft.client.Screenshot.takeScreenshot(client.getMainRenderTarget())) {
+            int count = 0;
+            for (int y = image.getHeight() / 3; y < image.getHeight() * 2 / 3; y++) {
+                for (int x = image.getWidth() / 3; x < image.getWidth() * 2 / 3; x++) {
+                    int pixel = image.getPixelRGBA(x, y);
+                    int red = pixel & 255, green = pixel >> 8 & 255, blue = pixel >> 16 & 255;
+                    if (red > 125 && blue > 125 && red - green > 70 && blue - green > 70) count++;
+                }
+            }
+            return count;
+        }
+    }
+
     private static void onServer(Runnable work) {
         pending = true;
         Minecraft.getInstance().getSingleplayerServer().execute(() -> {
@@ -128,7 +167,7 @@ public final class NightVisionClientProbe {
         done = true;
         String report = "NIGHT_VISION_CLIENT_" + (success ? "PASS" : "FAIL")
                 + " expectedFlicker=" + Boolean.getBoolean("ae2lt.nightVisionExpectFlicker")
-                + " initialDuration=" + initialDuration + " samples=" + samples
+                + " occludedOutlinePixels=" + outlinePixels + " initialDuration=" + initialDuration + " samples=" + samples
                 + " minimumDuration=" + minimumDuration + " minimumRendererScale=" + minimumScale
                 + " " + message + "\n";
         System.out.println(report);

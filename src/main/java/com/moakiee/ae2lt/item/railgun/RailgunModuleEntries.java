@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.stream.Stream;
 
 import com.mojang.serialization.Codec;
+import com.moakiee.ae2lt.registry.ModItems;
 
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -37,7 +38,7 @@ public record RailgunModuleEntries(List<ItemStack> entries) {
     }
 
     public boolean hasCore() {
-        return getCount(RailgunModuleType.CORE) > 0;
+        return getCount(RailgunModuleType.CHARGE) > 0;
     }
 
     public boolean hasOverloadExecution() {
@@ -137,8 +138,13 @@ public record RailgunModuleEntries(List<ItemStack> entries) {
             return List.of();
         }
         Map<String, ItemStack> merged = new LinkedHashMap<>();
+        ItemStack legacyCore = ItemStack.EMPTY;
         for (var stack : source) {
             String typeId = typeId(stack);
+            if (stack != null && stack.is(ModItems.RAILGUN_MODULE_CORE.get())) {
+                legacyCore = stack;
+                continue;
+            }
             if (typeId.isBlank()) {
                 continue;
             }
@@ -149,6 +155,10 @@ public record RailgunModuleEntries(List<ItemStack> entries) {
             } else {
                 existing.grow(count);
             }
+        }
+        if (!legacyCore.isEmpty()) {
+            merged.putIfAbsent("charge", legacyCore.transmuteCopy(ModItems.RAILGUN_MODULE_CHARGE.get(), 1));
+            merged.putIfAbsent("compensation", legacyCore.transmuteCopy(ModItems.MODULE_COMPENSATION.get(), 1));
         }
         return List.copyOf(merged.values());
     }

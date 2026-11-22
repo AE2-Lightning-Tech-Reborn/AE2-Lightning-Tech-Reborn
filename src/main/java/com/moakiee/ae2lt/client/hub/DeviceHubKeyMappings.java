@@ -39,12 +39,16 @@ public final class DeviceHubKeyMappings {
             GLFW.GLFW_KEY_G,
             CATEGORY);
 
+    public static final KeyMapping VISION_TARGETS = new KeyMapping(
+            "key.ae2lt.vision_targets", GLFW.GLFW_KEY_UNKNOWN, CATEGORY);
+
     private DeviceHubKeyMappings() {
     }
 
     @SubscribeEvent
     public static void register(RegisterKeyMappingsEvent event) {
         event.register(DASH);
+        event.register(VISION_TARGETS);
         event.register(OPEN_CONFIG);
     }
 
@@ -60,6 +64,11 @@ public final class DeviceHubKeyMappings {
                 return;
             }
 
+            if (VISION_TARGETS.consumeClick() && com.moakiee.ae2lt.client.vision.VisualEnhancement.enabled(
+                    com.moakiee.ae2lt.celestweave.module.NightVisionSubmodule.XRAY)) {
+                minecraft.setScreen(new com.moakiee.ae2lt.client.vision.VisionTargetsScreen());
+                return;
+            }
             while (DASH.consumeClick()) {
                 PacketDistributor.sendToServer(new DashPacket());
             }
