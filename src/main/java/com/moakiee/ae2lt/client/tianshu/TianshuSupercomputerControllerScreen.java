@@ -1,7 +1,9 @@
 package com.moakiee.ae2lt.client.tianshu;
 
+import com.lowdragmc.lowdraglib2.gui.texture.IGuiTexture;
+import com.lowdragmc.lowdraglib2.gui.ui.UIElement;
+import com.moakiee.ae2lt.client.ldlib.LdlibToolbarButton;
 import com.moakiee.ae2lt.client.machine.MultiblockControllerScreen;
-import com.moakiee.ae2lt.client.widgets.TextureToggleButton;
 
 import com.moakiee.ae2lt.logic.tianshu.CpuInternalCoreCalculator;
 import com.moakiee.ae2lt.logic.tianshu.CpuMainCoreTier;
@@ -11,22 +13,22 @@ import com.moakiee.ae2lt.menu.TianshuSupercomputerControllerMenu;
 import com.moakiee.ae2lt.network.TianshuControllerActionPacket;
 
 import java.util.EnumMap;
+import java.util.List;
 import java.util.Locale;
 
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.neoforged.neoforge.network.PacketDistributor;
 import appeng.client.gui.Icon;
-import com.moakiee.ae2lt.client.ldlib.LdlibAe2Button;
 import appeng.core.network.serverbound.SwitchGuisPacket;
 import appeng.menu.implementations.PriorityMenu;
 
 public class TianshuSupercomputerControllerScreen
         extends MultiblockControllerScreen<TianshuSupercomputerControllerMenu> {
 
+    private static final IGuiTexture BUILD = LdlibToolbarButton.glyph("quick_build");
+    private static final IGuiTexture SELECTION = LdlibToolbarButton.glyph("algorithm_settings");
     private static final EnumMap<CpuMainCoreTier, Long> STORAGE_LIMITS = new EnumMap<>(CpuMainCoreTier.class);
 
     public TianshuSupercomputerControllerScreen(
@@ -35,33 +37,16 @@ public class TianshuSupercomputerControllerScreen
     }
 
     @Override
-    protected void init() {
-        super.init();
-        int x = leftPos - 18;
-        int y = topPos;
-
-        var build = new TextureToggleButton(
-                TextureToggleButton.ButtonType.QUICK_BUILD,
-                state -> sendAction(TianshuControllerActionPacket.Action.AUTO_BUILD));
-        build.setTooltip(Tooltip.create(Component.translatable("ae2lt.tianshu.gui.build")));
-        build.setPosition(x, y);
-        addRenderableWidget(build);
-
-        var selection = new TextureToggleButton(
-                TextureToggleButton.ButtonType.CPU_SELECTION,
-                state -> sendAction(TianshuControllerActionPacket.Action.OPEN_ALGORITHM_SELECTION));
-        selection.setTooltip(Tooltip.create(Component.translatable(
-                "ae2lt.tianshu.gui.algorithm_selection")));
-        selection.setPosition(x, y + 22);
-        addRenderableWidget(selection);
-
-        var cpuPriorityLabel = Component.translatable("ae2lt.tianshu.gui.cpu_priority");
-        var priority = LdlibAe2Button.tab(20, Icon.PRIORITY, cpuPriorityLabel,
-                () -> PacketDistributor.sendToServer(
-                        SwitchGuisPacket.openSubMenu(PriorityMenu.TYPE)));
-        priority.setTooltip(Tooltip.create(cpuPriorityLabel));
-        priority.setPosition(leftPos + imageWidth, topPos);
-        addRenderableWidget(priority);
+    protected void addControls(UIElement root) {
+        root.addChild(LdlibToolbarButton.toolbar(-18, 0, () -> BUILD,
+                () -> sendAction(TianshuControllerActionPacket.Action.AUTO_BUILD),
+                () -> List.of(Component.translatable("ae2lt.tianshu.gui.build"))));
+        root.addChild(LdlibToolbarButton.toolbar(-18, 22, () -> SELECTION,
+                () -> sendAction(TianshuControllerActionPacket.Action.OPEN_ALGORITHM_SELECTION),
+                () -> List.of(Component.translatable("ae2lt.tianshu.gui.algorithm_selection"))));
+        root.addChild(LdlibToolbarButton.tab(imageWidth, 0, Icon.PRIORITY,
+                () -> PacketDistributor.sendToServer(SwitchGuisPacket.openSubMenu(PriorityMenu.TYPE)),
+                Component.translatable("ae2lt.tianshu.gui.cpu_priority")));
     }
 
     private void sendAction(TianshuControllerActionPacket.Action action) {
@@ -70,7 +55,7 @@ public class TianshuSupercomputerControllerScreen
     }
 
     @Override
-    protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
+    protected View view() {
         var tier = menu.getTier();
         var core = switch (tier) {
             case null -> null;
@@ -80,27 +65,31 @@ public class TianshuSupercomputerControllerScreen
             case MULTIDIMENSIONAL -> ModBlocks.MULTIDIMENSIONAL_SUPERCOMPUTING_UNIT.get();
         };
         boolean capped = menu.isCapped();
-        drawHeader(graphics, tier == null ? null : tier.computeTier(), core, tierName(), menu.isFormed(), capped);
+        var computeTier = tier == null ? null : tier.computeTier();
         if (!menu.isFormed() || tier == null) {
-            drawUnformed(graphics, issueText());
-            return;
+            return new View(computeTier, core, tierName(), menu.isFormed(), capped, issueText(),
+                    List.of(), null, null, 195);
         }
         var limits = tier.computeTier();
         long storage = menu.getStorageBytes();
         long maxStorage = STORAGE_LIMITS.computeIfAbsent(tier, CpuInternalCoreCalculator::maximumStorage);
-        metric(graphics, 0, "ae2lt.tianshu.gui.label_storage",
-                limits.multidimensional() ? "∞" : formatStorage(storage) + " / " + formatStorage(maxStorage),
-                limits.multidimensional() ? Double.POSITIVE_INFINITY : (double) storage / maxStorage, BLUE);
         int dispatches = menu.getSuccessfulDispatchesPerTick();
-        metric(graphics, 1, "ae2lt.tianshu.gui.label_dispatches",
-                formatCount(dispatches) + " / " + formatCount(limits.dispatchCap()) + "/t" + (capped ? I18n.get("ae2lt.tianshu.gui.capped") : ""),
-                (double) dispatches / limits.dispatchCap(), capped ? AMBER : GREEN);
         long copies = menu.getMaxCopiesPerTick();
-        metric(graphics, 2, "ae2lt.tianshu.gui.label_batch",
-                limits.multidimensional() ? "∞/t" : formatCount(copies) + " / " + formatCount(limits.copyCap()) + "/t",
-                limits.multidimensional() ? Double.POSITIVE_INFINITY : (double) copies / limits.copyCap(), BLUE);
-        text(graphics, I18n.get("ae2lt.tianshu.gui.label_loop") + ": " + I18n.get("ae2lt.tianshu.gui.value_loop",
-                formatCount(menu.getClosedLoopPatternStorages()), formatCount(menu.getClosedLoopSeedStorages())), 16, 199, 154);
+        var metrics = List.of(
+                new Metric("ae2lt.tianshu.gui.label_storage",
+                        limits.multidimensional() ? "∞" : formatStorage(storage) + " / " + formatStorage(maxStorage),
+                        limits.multidimensional() ? Double.POSITIVE_INFINITY : (double) storage / maxStorage, BLUE),
+                new Metric("ae2lt.tianshu.gui.label_dispatches",
+                        formatCount(dispatches) + " / " + formatCount(limits.dispatchCap()) + "/t"
+                                + (capped ? I18n.get("ae2lt.tianshu.gui.capped") : ""),
+                        (double) dispatches / limits.dispatchCap(), capped ? AMBER : GREEN),
+                new Metric("ae2lt.tianshu.gui.label_batch",
+                        limits.multidimensional() ? "∞/t"
+                                : formatCount(copies) + " / " + formatCount(limits.copyCap()) + "/t",
+                        limits.multidimensional() ? Double.POSITIVE_INFINITY : (double) copies / limits.copyCap(), BLUE));
+        String loop = I18n.get("ae2lt.tianshu.gui.label_loop") + ": " + I18n.get("ae2lt.tianshu.gui.value_loop",
+                formatCount(menu.getClosedLoopPatternStorages()), formatCount(menu.getClosedLoopSeedStorages()));
+        return new View(computeTier, core, tierName(), true, capped, null, metrics, null, loop, 199);
     }
 
     private Component issueText() {
