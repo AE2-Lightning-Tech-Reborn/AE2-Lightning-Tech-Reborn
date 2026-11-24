@@ -88,9 +88,7 @@ item_ids:
 
 ## Crafting & Stonecutting
 
-1. **Craft Pigmee Building Blocks**: Craft **Pigmee Building Blocks** on a crafting table using the Rainbow Pigmee Fumo (which stays in the crafting grid).
-
-<RecipeFor id="ae2lt:pigmee_building_block" />
+1. **Craft Pigmee Building Blocks**: Place 1 **Rainbow Pigmee Fumo** in the center of a crafting table surrounded by Cobblestone to craft **Pigmee Building Blocks** (the Rainbow Pigmee Fumo stays in the grid; check your recipe viewer for exact counts).
 2. **Stonecut Variants**: In a Stonecutter (or the Tianshu Crafting Terminal's Stonecutting page), 1 **Pigmee Building Block** cuts into:
    * 1 **Pigmee Plain Panel** (16 colors) or 1 **Pigmee Framed Panel** (16 colors) — 32 full panels in total.
    * 2 base **Pigmee Building Slabs**, or 2 colored **Pigmee Plain Slabs** (16 colors) / **Pigmee Framed Slabs** (16 colors) — 32 colored slabs in total.
