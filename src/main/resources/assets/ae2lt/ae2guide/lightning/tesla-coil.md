@@ -9,54 +9,33 @@ item_ids:
 
 # Tesla Coil
 
-<Row>
-  <BlockImage id="ae2lt:tesla_coil" scale="4" />
-</Row>
+<ItemImage id="ae2lt:tesla_coil" scale="2" float="left" />
 
-The **Tesla Coil** is the core device for controlled, stable Lightning production. It does not depend on the weather — it produces Lightning on demand by consuming FE and materials.
+The **Tesla Coil** is a two-block-tall ME networked machine that actively manufactures High Voltage Lightning or steps it up into Extreme High Voltage Lightning, writing the output directly into ME storage. It operates independently of in-world strikes captured by the [Lightning Collector](lightning-collector.md).
 
-## Two Operating Modes
+## Operating Modes
 
-The Tesla Coil GUI lets you switch between two modes.
+| Mode | Cost per Operation | Duration | Output | Requirement |
+|------|--------------------|---------:|--------|-------------|
+| **High Voltage** | Overload Crystal Dust ×2 + 25,000 FE | 5 ticks | 1 High Voltage Lightning | Connected to an ME network with HV storage space |
+| **Extreme High Voltage** | 8 High Voltage Lightning + 500,000 FE | 5 ticks | 1 Extreme High Voltage Lightning | 1 <ItemLink id="ae2lt:lightning_collapse_matrix" /> in the matrix slot and EHV storage space in ME |
 
-### High Voltage Mode
+Runtime behavior:
 
-* **Input**: Overload Crystal Dust + FE
-* **Output**: High Voltage Lightning (injected into the ME network)
-* **Default cost**: 2 Overload Crystal Dust + 25,000 FE per 1 HV Lightning produced
+* **Batch Locking**: High Voltage mode scales its batch size to the available Overload Crystal Dust and remaining ME storage capacity at cycle start. Extreme High Voltage mode processes 8 HV into 1 EHV per cycle.
+* **Energy and Completion**: Both modes run for 5 active ticks, consuming FE progressively and re-validating inputs and storage space on completion before writing straight into ME storage.
 
-High Voltage mode supports batch processing. The coil locks in the full amount of available crystal dust in its input slot and the HV Lightning headroom left in the ME network, then produces that entire batch in one charge cycle.
+## Power Supply
 
-### Extreme High Voltage Mode
+The Tesla Coil holds a **16,000,000 FE** internal buffer. External FE transfer is accepted up to the requested amount and remaining buffer space without an artificial per-tick intake cap.
 
-* **Input**: High Voltage Lightning (pulled from the ME network) + FE, and a **Lightning Collapse Matrix** must be installed
-* **Output**: Extreme High Voltage Lightning (injected into the ME network)
-* **Default cost**: 8 HV Lightning + 500,000 FE per 1 EHV Lightning produced
-* Each charge cycle produces exactly 1 EHV Lightning. The matrix is not consumed.
-
-## Operating Flow
-
-1. Select a mode from the GUI
-2. Prepare materials — HV mode: put Overload Crystal Dust into the slot; EHV mode: verify the matrix is installed and the network has enough HV Lightning
-3. Supply FE (the coil has a 16,000,000 FE internal buffer and accepts up to 200,000 FE/tick)
-4. The coil locks in the mode and starts charging (about 5 ticks)
-5. When the charge completes, the output is injected into the ME network in one batch
-
-## Lightning Collapse Matrix
-
-<ItemImage id="ae2lt:lightning_collapse_matrix" scale="2" float="left" />
-
-Extreme High Voltage mode requires a **Lightning Collapse Matrix** in the coil's matrix slot. The matrix is **not consumed** during processing, but it must stay in the slot.
+<OptionalSection modId="appflux">
+With Applied Flux installed, the Tesla Coil can also recharge its internal buffer directly from FE stored in the connected ME network when available.
+</OptionalSection>
 
 ## Redstone Control
 
-The upgrade panel accepts one AE2 Redstone Card. With the card installed, the toolbar button cycles through **Ignore Redstone**, **Active with Signal**, and **Active without Signal**. Without a card, automatic operation is unchanged. Pulse mode is not supported.
+The single upgrade slot accepts an AE2 <ItemLink id="ae2:redstone_card" />, and both the upper and lower halves read redstone signals:
 
-- To limit output stock, configure an ME Level Emitter to signal when the output reaches its stop condition, and select Active without Signal on the machine.
-- To preserve input stock, monitor the consumed resource, signal while enough remains, and select Active with Signal.
-
-A redstone stop preserves the current recipe and paid progress, pausing processing energy, material consumption and new output. Processing resumes when allowed. Automation can still remove existing items. The emitter measures only its own ME network inventory; export catalyzer products into that network for output-stock control.
-
-This is a signal gate: one output batch, one input debit or concurrent machines can cross a threshold. Leave room for a full operation when protecting an input reserve, and reduce batch size when a tighter output limit is needed.
-
-Either half of the Tesla Coil can receive the control signal.
+* Pausing preserves the locked mode, batch size, and progress until resumed.
+* When automated with an ME Level Emitter watching Lightning stock, note that batches complete as a whole, so the final stored amount may slightly overshoot the emitter threshold.

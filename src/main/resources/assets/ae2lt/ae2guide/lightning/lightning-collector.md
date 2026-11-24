@@ -11,64 +11,41 @@ item_ids:
 
 # Lightning Collector
 
-<Row>
-  <BlockImage id="ae2lt:lightning_collector" scale="4" />
-</Row>
+<ItemImage id="ae2lt:lightning_collector" scale="2" float="left" />
 
-The **Lightning Collector** is the starting point of the Lightning system. When lightning strikes within its collection area, the collector injects Lightning energy directly into the ME network.
+The **Lightning Collector** converts in-world lightning strikes into Lightning resources inside your ME network. Your first collector is crafted via in-world lightning conversion (check your recipe viewer for exact ingredients).
 
-*`"Borrowing from others, seeking oneself."`*
+## Setup and Capture Rules
 
-`— Mysterious Block`
+1. Place a **Lightning Collector** connected to an ME network with available Lightning storage.
+2. Place a <ItemLink id="minecraft:lightning_rod" /> **directly on top** of the collector.
+3. Whenever a lightning bolt lands within 1 block of the Lightning Rod along each axis (a 3×3×3 cube centered on the rod), the collector attempts to insert Lightning into ME storage.
 
-## Basic Usage
+Operational details:
 
-Put a vanilla **Lightning Rod directly on top of the collector** and connect the collector to an ME network. Both natural and artificial lightning are checked using the block containing the strike position. The collection area is a **3×3×3 cube centered on the top rod's block**, extending one block in every direction. Keep the rod exposed to the sky for natural thunderstorms.
+* **Nearest-First, Single Capture**: If multiple collectors cover the same strike location, the closest Lightning Rod is tried first. As soon as one collector inserts **at least 1 unit**, the search stops for that bolt.
+* **Partial Insertion**: If ME storage can only hold part of the strike's yield, the accepted portion is still inserted and counts as a successful capture.
+* **Network Requirement**: The collector must belong to an ME grid with writable storage space for the captured voltage tier.
+* **Capture Rate**: Each collector can complete at most one capture per tick (default cooldown 0 ticks), and its active visual state remains lit for 20 ticks.
 
-When collection areas overlap, collectors are tried in order of their top rods' distance from the strike block. A collector that cannot store any energy allows the next one to try. **Each bolt can be collected successfully by at most one collector, once.** Even a partial insertion consumes the bolt; later flashes or a save/reload cannot produce more energy from it.
+## Crystal Slot and Electro-Chime Crystals
 
-Three conditions must be met for a strike to be productive:
+<ItemGrid>
+  <ItemIcon id="ae2lt:electro_chime_crystal" />
+  <ItemIcon id="ae2lt:perfect_electro_chime_crystal" />
+</ItemGrid>
 
-* A Lightning Rod must be placed in the block directly above the collector
-* The network must be online
-* The network must have enough storage capacity to accept the Lightning about to be produced (otherwise the strike is wasted)
+Each Lightning Collector has a crystal slot that accepts an **Electro-Chime Crystal** or **Perfect Electro-Chime Crystal** to boost output per strike:
 
-The tier of Lightning produced depends on the collected bolt:
+| Crystal Slot | Artificial Strike (High Voltage) | Natural Strike (Extreme High Voltage) | Notes |
+|--------------|----------------------------------|---------------------------------------|-------|
+| Empty | 1–2 | 1–4 | Base output |
+| Electro-Chime Crystal | Scales linearly from ~2 to 16 | Scales linearly from ~2 to 16 | Expected center scales with growth; random spread is at least ±1 (default `floor(center × 0.12)`) |
+| Perfect Electro-Chime Crystal | Fixed 16 | Fixed 16 | Maximum, consistent yield |
 
-* **Artificial lightning** (for example, summoned by a carried or dropped Overload Crystal) → **High Voltage Lightning**
-* **Natural lightning** (a real thunderstorm bolt) → **Extreme High Voltage Lightning**
+### Obtaining and Nurturing Electro-Chime Crystals
 
-After each successful collection the collector enters a short cooldown (default 0 ticks, configurable). Each collector can successfully collect at most one bolt per tick.
-
-## Electro-Chime Crystal and Yield
-
-<ItemImage id="ae2lt:electro_chime_crystal" scale="2" float="left" />
-
-The collector has a dedicated **crystal slot** where you can insert an **Electro-Chime Crystal**. Whether a crystal is installed and how far along its cultivation is determines the yield of each strike.
-
-| Crystal State | Yield |
-|---------------|-------|
-| No crystal | Random within a fixed **base range** (default HV 1~2, EHV 1~4) |
-| Cultivating Electro-Chime Crystal | Scales linearly between "starting yield" and "final yield" with cultivation progress, plus a small random jitter |
-| Perfect Electro-Chime Crystal | **Fixed yield** (default 16 for both HV and EHV), no randomness |
-
-## Cultivating the Electro-Chime Crystal
-
-The Electro-Chime Crystal progresses through four stages based on cultivation value:
-
-| Stage | Progress |
-|-------|----------|
-| Dormant | < 20% |
-| Stirring | 20% ~ 55% |
-| Resonant | 55% ~ 85% |
-| Overcharged | ≥ 85% |
-
-* The crystal only gains cultivation value when the collector is struck by **natural lightning** (the strikes that produce Extreme High Voltage Lightning) and the network has enough capacity to store the Lightning produced. Artificial lightning does not contribute to cultivation
-* Once the cultivation value reaches its maximum, the Electro-Chime Crystal automatically transforms into a **Perfect Electro-Chime Crystal**
-* The Perfect Electro-Chime Crystal no longer cultivates further, but provides a stable maximum yield
-
-## Automation Tips
-
-* The collector must have a Lightning Rod directly above it and be connected to an online ME network, otherwise lightning strikes are wasted
-* If you do not want to wait for natural thunderstorms, use the [Atmospheric Ionizer](../machines/atmospheric-ionizer.md) with Thunderstorm Condensate to force thunderstorm weather
-* For a fully weather-independent solution, use the [Tesla Coil](tesla-coil.md) to produce HV / EHV Lightning on demand
+* **Crafting**: Standard Electro-Chime Crystals can be made via in-world lightning conversion or in a Lightning Simulation Room.
+* **Nurturing to Perfect**: With an Electro-Chime Crystal installed, every successful capture of **natural lightning** that writes at least 1 unit to ME storage adds 8–12 growth points, subject to a minimum 20-tick interval per collector. Reaching **180 points** automatically transforms it into a **Perfect Electro-Chime Crystal**.
+* **Growth Stages**: Dormant (0%–20%, 0–35), First Chime (20%–55%, 36–98), Resonant (55%–85%, 99–152), and Overloaded (85%+, 153–179).
+* **Alternative Route**: Perfect Electro-Chime Crystals can also be crafted directly in the Lightning Simulation Room at high material cost.

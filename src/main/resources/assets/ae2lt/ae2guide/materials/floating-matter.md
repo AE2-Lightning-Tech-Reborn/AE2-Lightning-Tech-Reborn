@@ -11,25 +11,20 @@ item_ids:
 
 <ItemImage id="ae2lt:floating_matter" scale="2" float="left" />
 
-Floating Matter is a material gathered through Shulker-projectile capture.
+**Floating Matter** is captured from Shulker Bullets and used in late-game crafting and flight-related equipment modules.
 
-## Obtaining
+## Capture Mechanics
 
-Connect an <ItemLink id="ae2:annihilation_plane" /> to an active ME network and enchant the plane with **Silk Touch**. When a vanilla Shulker projectile reaches the plane, the projectile is consumed and one <ItemLink id="ae2lt:floating_matter" /> is inserted into the ME network.
+1. Enchant an <ItemLink id="ae2:annihilation_plane" /> with **Silk Touch** and connect it to an active, powered ME network with available item storage.
+2. Orient the **front face** of the plane toward incoming Shulker Bullets.
+3. When a Shulker Bullet impacts the exact side of the cable block hosting that plane, the network pays power and attempts to insert 1 **Floating Matter**:
+   * On success, the bullet vanishes without hitting a target.
+   * If power or storage is unavailable, or the bullet hits a different face, capture fails and the bullet resolves its normal collision.
 
-Conditions:
+> Controlled by the `shulkerBulletCollection` server config option.
 
-* The Annihilation Plane must be connected to a powered, active ME network
-* The Annihilation Plane must have Silk Touch
-* A Shulker projectile must collide with the plane; if **no explosion particles** appear, collection succeeded
-* The network must have enough storage space to accept the Floating Matter
+<OptionalSection modId="apothic_attributes">
+## Apothic Attributes Brewing
 
-The projectile does not need to be shot down. Simply letting it reach the Silk Touch Annihilation Plane is enough.
-
-> The configuration file can disable this collection mechanic.
-
-## Brewing
-
-When **Apothic Attributes** is installed, brew an **Awkward Potion** with <ItemLink id="ae2lt:floating_matter" /> in a Brewing Stand to make its **Potion of Levitation**, granting **Levitation I for 2 minutes**.
-
-This alternative brewing recipe is only available with Apothic Attributes installed.
+When Apothic Attributes is installed and its target potion is registered, **Floating Matter** can be brewed with an Awkward Potion to produce that potion. Check your recipe viewer for the exact effect and duration registered by your modpack.
+</OptionalSection>

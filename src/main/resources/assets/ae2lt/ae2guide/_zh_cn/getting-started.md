@@ -8,113 +8,77 @@ navigation:
 
 # 入门指南
 
-——闪电科技的开端与你必须了解的基础知识
+本页按顺序说明从零开始建立第一套闪电产线的完整步骤。AE2 闪电科技面向中后期自动化场景，建议在具备稳定的基础 ME 网络与 FE 产能后再推进主要产线。
 
-## 定位
+## 前置准备
 
-闪电科技是一款属于中后期的AE2附属模组，在极高数值的前提下，需要你有着相应的产能(不包含魔改)。若你在后期制造闪电科技的机器时感到吃力，说明你的产能与你的需求并不匹配，也就是来自于其他模组的物流完全足以支撑起你的产线，那么说明闪电科技并不适合当前的你，请不要为了体验而强行制造闪电科技的机器。
+开始前请准备以下基础条件：
 
-## 闪电
+* 一个可正常运行的 ME 网络（含 <ItemLink id="ae2:controller" /> 或小型无控制器网络）以及 <ItemLink id="ae2:drive" />、<ItemLink id="ae2:inscriber" />
+* 若干 <ItemLink id="ae2:certus_quartz_crystal" />、<ItemLink id="ae2:fluix_block" />、<ItemLink id="ae2:quartz_block" /> 与赛特斯石英母岩
+* 至少一个 <ItemLink id="minecraft:lightning_rod" />
+* 稳定的 FE 供电来源，用于后续驱动加工机器
 
-在本模组中，雷击转化是推进科技树的必要流程。
+## 认识闪电类型
 
-闪电分为两种类型: **自然闪电**和**人工闪电**，自然闪电就是雷暴天气下由游戏本身产生的闪电；而人工闪电则是通过其他方式召唤出来的闪电，如附魔引雷的三叉戟，本模组的过载水晶，铁砧工艺的黄玉，Powah!的带电雪球等。
+本模组将世界中的雷击分为两类，它们决定了不同转化和收集行为的结果：
 
-## 前置条件
+* **自然闪电**：由世界雷暴天气自然触发的雷击。可用于精制母岩结构转化，在闪电收集器中产出**极高压闪电**，并可培养槽内的电鸣水晶。
+* **人工闪电**：由引雷三叉戟、携带或丢弃的过载水晶，或其他模组召唤产生的雷击。可用于简化母岩结构与地面物品雷击转化，在闪电收集器中产出**高压闪电**。
 
-开始闪电科技前请确保已经具备一个可运行的 ME 网络，至少包含：
-
-* 一个 <ItemLink id="ae2:controller" /> 或一个无控制器的小型网络
-* 少量 <ItemLink id="ae2:certus_quartz_crystal" />、<ItemLink id="ae2:fluix_crystal" /> 与 <ItemLink id="ae2:fluix_block" />
-* 一个 <ItemLink id="minecraft:lightning_rod" /> 与若干等级的 AE2 赛特斯石英母岩
-
-## 第一步：获取过载水晶
+## 第一步：获取过载水晶与母岩
 
 <ItemImage id="ae2lt:overload_crystal" scale="2" float="left" />
 
-**过载水晶**是本模组最基础的材料，几乎所有配方都需要用到它或其衍生产物。
+**过载水晶**与**过载水晶粉**是整个模组的起点。常规获取方式是通过 3×3 雷击结构将 AE2 的赛特斯石英母岩转化为过载水晶母岩：
 
-常规获得方式是培育**过载水晶母岩**，而母岩本身通过**多方块雷劈仪式**由 AE2 赛特斯石英母岩转化得来：
-
-1. 搭建 3×3 多方块结构：中心放置对应等级的赛特斯石英母岩；精制结构的四角放 <ItemLink id="ae2lt:overload_crystal_block" /> + 四边 <ItemLink id="ae2:fluix_block" />；简化结构的四角放 <ItemLink id="ae2:quartz_block" /> + 四边 <ItemLink id="ae2:fluix_block" />
-2. 中心正上方放置一个 <ItemLink id="minecraft:lightning_rod" />
-3. 让闪电击中避雷针，简化结构支持任意雷击，而精制结构需要雷雨天气下的自然落雷。
-
-精制结构需要**自然雷击**，而简化结构接受**任意闪电**
-
-<ItemImage id="ae2lt:flawless_budding_overload_crystal" scale="2" float="left" />
-
-### 无瑕的过载水晶母岩
-
-**无瑕的过载水晶母岩**生长时不会衰减，是大规模产线的基础。只有**精制结构 + 自然雷击**能产出无瑕母岩：
+1. 搭建 3×3 同高度平台：中心放置对应等级的赛特斯石英母岩，东、西、南、北四条正边各放 1 个 <ItemLink id="ae2:fluix_block" />。
+2. 根据阶段选择四角方块：
+   * **简化结构（推荐起步）**：四角放置 <ItemLink id="ae2:quartz_block" />。接受**任意闪电**（人工或自然），将无瑕、有瑕、开裂的赛特斯石英母岩分别降一级转化为有瑕、开裂、损坏的过载水晶母岩。
+   * **精制结构（无瑕路线）**：四角放置 <ItemLink id="ae2lt:overload_crystal_block" />。仅接受**自然闪电**，同级转化为对应的过载水晶母岩。
+3. 在中心母岩正上方放置 1 个 <ItemLink id="minecraft:lightning_rod" />，等待雷击命中避雷针。转化完成后，外圈 8 个方块会被消耗，避雷针保留。
 
 <GameScene zoom="4" background="transparent">
   <ImportStructure src="assets/assemblies/flawless_budding_overload.snbt" />
   <IsometricCamera yaw="195" pitch="30" />
 </GameScene>
 
-* 中心放置一个**无瑕的赛特斯石英母岩**
-* 东 / 西 / 南 / 北四个正方向同一高度各放置一个 <ItemLink id="ae2:fluix_block" />
-* 四个对角各放置一个**过载水晶块**
-* 中心正上方放置一个**避雷针**
+> 只有**精制结构 + 自然闪电**能够得到不会因生长衰减的 <ItemLink id="ae2lt:flawless_budding_overload_crystal" />。在拥有首批过载水晶产能前，先用简化结构起步即可。
 
-搭建完成后，等待**自然雷击**命中避雷针即可完成转化。雷击命中后，周围八个外围方块会被消耗，中心方块转化为无瑕的过载水晶母岩。
+母岩会在相邻面生长水晶芽（小型 → 中型 → 大型 → 过载水晶簇），受 <ItemLink id="ae2:growth_accelerator" /> 加速。初期没有过载水晶粉时，破坏未成熟的水晶芽即可获得过载水晶粉；破坏完全成熟的过载水晶簇可获得过载水晶（受时运影响）。更多掉落与衰减细节见 [过载水晶](materials/overload-crystal.md)。
 
-> 无瑕转化只接受雷暴天气下的自然雷电。由过载水晶召唤的人工闪电不会触发。较低等级的母岩另有"简化结构"可选，详见 [过载水晶](materials/overload-crystal.md) 页。
+## 第二步：雷击转化首批材料与机器
 
-过载水晶母岩的行为与赛特斯石英母岩基本一致：
+部分起步材料与首台机器需要将原料作为**掉落物**丢在地面上，再让雷击（自然或人工均可）命中以完成转化（具体原料清单与数量可能随整合包调整，请以配方查看器为准）。
 
-* 水晶芽会依次生长为小型 → 中型 → 大型 → **过载水晶簇**
-* <ItemLink id="ae2:growth_accelerator" />（催生器）对过载水晶同样有效
-* 破坏**未完全长成**的水晶芽会掉落**过载水晶粉**
-* 破坏**完全长成**的过载水晶簇会掉落**过载水晶**，时运附魔生效
-* 不完美的母岩每次生长都可能衰减一个等级；挖掘时，精准采集可保留有瑕、开裂、损坏等级，无瑕母岩会掉落为有瑕母岩
+默认情况下，将 <ItemLink id="ae2lt:overload_crystal" /> 放在**快捷栏任意槽位或副手**，约每 200 tick（10 秒）会在玩家当前位置召唤一次人工闪电；将过载水晶丢在地面上时，物品实体也会独立计时并约每 200 tick 在自身位置引雷。这两种人工引雷路径**均不要求露天**（旁观模式下不触发；将水晶移出检测槽位会重置计时）。
 
-更多细节请参阅 [过载水晶](materials/overload-crystal.md)。
+前期通常依次通过地面雷击转化与压印器制作以下起步物品：
 
-~~小知识: 在末地生成的结构苍穹星舰的四个箱子后面各有一个过载水晶块~~
+1. **基础材料**：先经雷击转化获取 <ItemLink id="ae2lt:overload_inscriber_press" /> 与 <ItemLink id="ae2lt:overload_alloy" />，在 <ItemLink id="ae2:inscriber" /> 中压印出**未过载的电路板**，经雷击转化为**过载电路板**后，再回到压印器合成为 <ItemLink id="ae2lt:overload_processor" />。
+2. **首套闪电设备**：随后经雷击转化获得 <ItemLink id="ae2lt:lightning_collector" />、<ItemLink id="ae2lt:lightning_cell_component_i" /> 与首台 <ItemLink id="ae2lt:lightning_simulation_room" />。
 
-## 第二步：通过闪电转化获取早期材料
+<OptionalSection modId="extendedae">
+安装 ExtendedAE 后，也可以通过**电路切片器**与**水晶装配器**简化未过载的电路板和过载处理器的制作流程（具体配方请查阅配方查看器）。
+</OptionalSection>
 
-本模组的许多早期材料需要通过**闪电转化**获得——将物品丢弃在地面上，再让雷电击中这些掉落物以完成转化。
+## 第三步：组装存储元件并启动第一套产线
 
-<ItemImage id="ae2lt:overload_alloy" scale="2" float="left" />
+雷击转化产出的是中间材料 <ItemLink id="ae2lt:lightning_cell_component_i" />，无法直接放入驱动器。需要将其与 <ItemLink id="ae2lt:lightning_item_cell_housing" /> 合成（或使用有序配方），制成 <ItemLink id="ae2lt:lightning_storage_component_i" /> 后再装入 <ItemLink id="ae2:drive" />。
 
-典型的闪电转化产物包括：
+<RecipeFor id="ae2lt:lightning_storage_component_i" />
 
-* **过载合金锭**、**过载电路板**、**过载压印模板**等基础材料
-* **闪电收集器**、**闪电模拟室**等第一批机器
-* **电鸣水晶**与**闪电存储组件 I** 等闪电体系的基础物品
+按「收集 → 存储 → 消耗」连接首套最小产线：
 
-触发闪电转化有两种方式：
+1. **收集**：放置 <ItemLink id="ae2lt:lightning_collector" />，在其正上方紧贴放置 1 个 <ItemLink id="minecraft:lightning_rod" />，并接入 ME 网络。雷击落入避雷针周围 3×3×3 范围时，闪电资源会直接写入 ME 网络。
+2. **存储**：将组装好的**闪电存储元件 I** 放入 ME驱动器。之后即可在 ME 终端中查看已存入的高压闪电与极高压闪电。
+3. **消耗**：放置 <ItemLink id="ae2lt:lightning_simulation_room" />，接入同一 ME 网络并提供 FE 电能。机器在推进加工时消耗 FE，结算成品时从 ME 网络扣除配方所需的闪电。
 
-* **自然雷暴**：雷暴天气下，野外的掉落物会被自然雷击命中
-* **主动召唤**：携带过载水晶站在露天位置约 10 秒，将在周围召唤一次人工闪电
+## 第四步：后续扩展方向
 
-> 人工闪电可以触发闪电转化配方和简化结构，但**不能**触发上文「无瑕母岩」所需的精制结构转化。精制结构只接受自然雷击。
+首套闪电产线稳定运行后，可按需求逐步推进：
 
-## 第三步：建立第一条闪电产线
-
-获得起步材料与基础机器后，可先搭建最小可用的产线：**收集 → 存储 → 消耗**。
-
-1. **收集**：在空旷处放置一台**闪电收集器**并接入 ME 网络。雷电命中时，收集器会将闪电能量直接注入 ME 网络
-2. **存储**：将**闪电存储组件 I** 放入 <ItemLink id="ae2:drive" />；闪电将与物品、流体一样出现在 ME 终端中
-3. **消耗**：**闪电模拟室**与**闪电装配室**在配方完成时会消耗 ME 网络中的闪电
-
-此外常用的辅助设备：
-
-* [特斯拉线圈](lightning/tesla-coil.md) — 消耗过载水晶粉与 FE 能量，稳定批量产出高压 / 极高压闪电
-* [大气电离仪](machines/atmospheric-ionizer.md) — 消耗 AE 能量与**天气凝核**，强制改变世界天气
-
-## 第四步：中后期目标
-
-起步产线成型后，可以依次解锁以下内容：
-
-* **闪电模拟室**（3 输入槽，简单材料转化）与**闪电装配室**（9 输入槽，复杂装配）
-* **过载处理工厂**（9 输入槽，支持物品与流体输入输出，可用闪电坍缩矩阵启用多并行）
-* **水晶催化器**（水 + 槽内材料，支持水晶 / 粉化两种模式）
-* **过载 ME 控制器** — 每个控制器为网络提供 128 频道
-* **过载线缆** — 单根线缆不设频道上限
-* **过载样板供应器**与**过载 ME 接口** — 36 槽位，支持无线发货与无线 I/O
-
-具体细节请参阅左侧导航中的各分类页面。
+* **稳定闪电供给**：建造 [特斯拉线圈](lightning/tesla-coil.md) 主动消耗过载水晶粉与 FE 批量制造高压闪电，或使用 [大气电离仪](machines/atmospheric-ionizer.md) 切换世界天气以创造自然雷暴条件。
+* **高阶加工产线**：依次解锁 [闪电装配室](machines/lightning-assembly-chamber.md)、[过载处理工厂](machines/overload-processing-factory.md)、[水晶催化器](machines/crystal-catalyzer.md) 与 [挖掘工厂](machines/mining-factory.md)，并制造 [闪电坍缩矩阵](materials/lightning-collapse-matrix.md) 解锁机器的代偿与并行能力。
+* **过载网络扩展**：部署 [过载ME控制器](overloaded-network/overloaded-controller.md)、[过载线缆](overloaded-network/overloaded-cable.md)、[无线网络](overloaded-network/wireless-network.md)，以及配备 36 个样板槽的 [过载样板供应器](overloaded-network/overloaded-pattern-provider.md) 与配备 36 个配置槽的 [过载ME接口](overloaded-network/overloaded-interface.md)。
+* **天枢与终局装备**：搭建 [天枢物质扭曲矩阵](matrix/matrix-index.md) 与 [天枢超算](tianshu/tianshu-index.md)，前往末地采集 [苍穹材料](materials/firmament-materials.md) 并制作 [苍穹织雷](celestweave.md) 与 [电磁炮](electromagnetic-railgun.md)。

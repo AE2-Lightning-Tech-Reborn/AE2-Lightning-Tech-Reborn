@@ -8,31 +8,31 @@ navigation:
 
 # Materials & Items
 
-AE2 Lightning Tech introduces a large set of new materials. The pages below cover each major item and material group in detail.
+AE2 Lightning Tech introduces interconnected material lines spanning starter Overload components, late-game singularities and matrices, End-tier Firmament refining, world-interaction drops, and the Pigmee starter and building lines.
 
 <SubPages />
 
-## Firmament Materials
+## Material Lines Overview
 
-Firmament materials are the End-tier line: starting from Firmament Dust (obtainable only in the End), they are refined through the Firmament Conversion Core and the Overload Processing Factory into the core components of the Celestweave armor set and the Electromagnetic Railgun. See [Firmament Materials](firmament-materials.md).
+### Overload Core & End-Tier Materials
+
+Start with [Overload Crystal](overload-crystal.md) to progress through [Overload Alloy](overload-alloy.md), [Overload Processor](overload-processor.md), and [Overload Machine Frame](overload-machine-frame.md), then advance to [Overload Singularity & Ultimate Overload Core](overload-singularity.md) and the [Lightning Collapse Matrix](lightning-collapse-matrix.md).
+
+### End & World-Interaction Materials
+
+* **[Firmament Materials](firmament-materials.md)**: Gather Firmament Dust at the End build height using upward-facing ME Annihilation Planes, then refine it through the Firmament Conversion Core in End Firmament Starships and the Overload Processing Factory into Firmament Alloy Ingots, Firmament Superconducting Wire, and the four Firmament Spirit Cores.
+* **[Floating Matter](floating-matter.md)**: Intercept Shulker Bullets on the front face of an active Silk Touch <ItemLink id="ae2:annihilation_plane" /> to insert <ItemLink id="ae2lt:floating_matter" /> into your ME network.
 
 <ItemGrid>
   <ItemIcon id="ae2lt:firmament_dust" />
   <ItemIcon id="ae2lt:firmament_alloy_ingot" />
   <ItemIcon id="ae2lt:firmament_spirit_core_core" />
-</ItemGrid>
-
-## Floating Matter
-
-Floating Matter is a Shulker-projectile capture material. A Silk Touch <ItemLink id="ae2:annihilation_plane" /> connected to an active ME network can consume Shulker projectiles that reach it and insert <ItemLink id="ae2lt:floating_matter" /> into storage. See [Floating Matter](floating-matter.md).
-
-<ItemGrid>
   <ItemIcon id="ae2lt:floating_matter" />
 </ItemGrid>
 
-## Weather Condensate
+### Weather Condensates
 
-Weather Condensate items are consumed by the [Atmospheric Ionizer](../machines/atmospheric-ionizer.md) to control the world's weather. They are crafted from Overload Alloy produced in the Lightning Simulation Room, Lightning Assembly Chamber, or Overload Processing Factory.
+All three weather condensates are crafted on a crafting table and consumed by the [Atmospheric Ionizer](../machines/atmospheric-ionizer.md) to change world weather.
 
 <ItemGrid>
   <ItemIcon id="ae2lt:clear_condensate" />
@@ -40,18 +40,18 @@ Weather Condensate items are consumed by the [Atmospheric Ionizer](../machines/a
   <ItemIcon id="ae2lt:thunderstorm_condensate" />
 </ItemGrid>
 
-| Item | Target Weather | AE Cost |
-|------|----------------|---------|
-| Clear Condensate | Clear | 500,000 AE |
-| Rain Condensate | Rain | 1,000,000 AE |
-| Thunderstorm Condensate | Thunderstorm | 8,000,000 AE |
+| Item | Target Weather | AE Cost | Duration (ticks) |
+|------|----------------|--------:|-----------------:|
+| Clear Condensate | Clear | 500,000 AE | 12,000–180,000 |
+| Rain Condensate | Rain | 1,000,000 AE | 12,000–24,000 |
+| Thunderstorm Condensate | Thunderstorm | 8,000,000 AE | 3,600–15,600 |
 
-## Blocks
+### Pigmee Line & Notable Blocks
 
-| Block | Notes |
-|-------|-------|
-| Overload Crystal Block | Decorative block, also used as a building material for the Budding Overload Crystal conversion multiblock |
-| [Pigmee Building Materials](pigmee-building-materials.md) | Source material for dyed building blocks, stonecut into 32 colored panels and slabs |
-| [Block of Silicon](overload-machine-frame.md) | Compact storage block for silicon |
-| [Overload Machine Frame](overload-machine-frame.md) | Shared base frame for most Overload processing machines |
-| <ItemLink id="ae2lt:overload_tnt" /> | Explosive block that unleashes a barrage of artificial lightning; see [Overload TNT](../lightning/overload-tnt.md) |
+| Category | Description |
+|----------|-------------|
+| [Pigmee Starter Automation](pigmee-automation.md) | Pigmee Core, Pigmee Storage Cell, Pigmee Synthesis Station, and compact starter autocrafting |
+| [Rainbow Pigmee Dyeing](rainbow-pigmee.md) | Dye crafting, 16-color cycling, and direct item recoloring with Rainbow Pigmee Fumo |
+| [Pigmee Building Materials](pigmee-building-materials.md) | Pigmee Building Block and Slab, stonecuttable into 32 colored panels and 32 colored slabs |
+| [Overload Machine Frame & Structural Blocks](overload-machine-frame.md) | Overload Machine Frame, Block of Silicon, and the wear-free Overload Alloy Anvil |
+| <ItemLink id="ae2lt:overload_tnt" /> | Triggers a multi-stage lightning blast; see [Overload TNT](../lightning/overload-tnt.md) |

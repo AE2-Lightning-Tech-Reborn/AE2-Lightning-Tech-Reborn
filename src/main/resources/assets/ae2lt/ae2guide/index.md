@@ -6,23 +6,27 @@ navigation:
 
 # AE2 Lightning Tech
 
-AE2 Lightning Tech ~~Thunder Tech~~ is an extension for Applied Energistics 2. It introduces a brand-new storage type to the ME network — **Lightning** — along with a full material chain, dedicated processing machines, and an "Overloaded" family of network devices that break past the vanilla channel limits.
+AE2 Lightning Tech is a mid-to-late-game addon for Applied Energistics 2. It introduces **Lightning** as a new storable resource in the ME network and builds five major progression tracks around it: lightning-driven processing machines, high-capacity Overloaded networking, the Tianshu crafting multiblocks and terminals, End-tier Firmament equipment, and Pigmee starter automation and building variants.
 
-Main features:
+Key areas covered by this addon:
 
-* Collect natural or machine-generated lightning as **Lightning energy** and store it in your ME network alongside items and fluids
-* Use Lightning to power advanced processing machines that produce Overload Alloy, Overload Processors, the Lightning Collapse Matrix and other new materials
-* Expand the channel capacity and reach of your ME network with the Overloaded ME Controller, Overloaded Cable, Overloaded Pattern Provider and Overloaded ME Interface
+* **Lightning & Processing Lines**: Capture natural or artificial lightning strikes as High Voltage and Extreme High Voltage Lightning in the ME network, and combine them with FE power to run the Simulation Room, Assembly Chamber, Overload Processing Factory, Crystal Catalyzer, and Mining Factory.
+* **Overloaded Networking**: Expand channel capacity, remote connectivity, and high-throughput automation with the Overloaded ME Controller, Overloaded Cables, wireless links, Overloaded Pattern Providers, Overloaded ME Interfaces, and the Overloaded IO Port.
+* **Tianshu Computing & Terminals**: Build the Tianshu Matter Warping Matrix and Tianshu Supercomputer alongside the two Tianshu Terminals for large-scale crafting, closed-loop automation, and inventory maintenance.
+* **Firmament Materials & Overload Devices**: Harvest Firmament materials in the End to assemble and configure Celestweave armor and the Electromagnetic Railgun.
+* **Pigmee Starter & Building Line**: Craft compact starter storage and synthesis devices from Pigmee Cores, recolor items with Rainbow Pigmee Fumo, and produce Pigmee building blocks.
+
+> Throughout this guide, **AE** refers to ME network power, **FE** refers to machine and device energy, and **High Voltage / Extreme High Voltage Lightning** refers to the lightning resources stored in your ME network.
 
 ## Table of Contents
 
-* [Getting Started](getting-started.md) — From your first Overload Crystal to your first Lightning production line
-* [Lightning System](lightning/lightning-index.md) — Producing, storing and consuming Lightning
-* [Processing Machines](machines/machines-index.md) — Lightning Simulation Room, Lightning Assembly Chamber, Overload Processing Factory and more
-* [Materials & Items](materials/materials-index.md) — Overload Crystal, alloys, processors, and other key materials
-* [Tianshu Matter Warping Matrix](matrix/matrix-index.md) — Large-scale parallel crafting, pattern storage, and a configurable core array
-* [Tianshu Supercomputer](tianshu/tianshu-index.md) — Shared crafting storage, concurrent jobs, and configurable computing units
-* [Tianshu Pattern Encoding Terminal](terminals/pattern-encoding-terminal.md) — Pattern encoding, upload, and inventory maintenance
-* [Tianshu Crafting Terminal](terminals/crafting-terminal.md) — Crafting, smithing, anvil, stonecutting, and cell configuration
-* [Overloaded Network](overloaded-network/overloaded-network-index.md) — Overloaded ME Controller, Cable, Interface and Pattern Provider
-* [Overload Devices](devices-index.md) — Electromagnetic Railgun, Celestweave armor and their modules
+* [Getting Started](getting-started.md) — From your first Budding Overload Crystal to a working Lightning production line
+* [Lightning System](lightning/lightning-index.md) — Lightning strikes, Lightning Collector, Tesla Coil, Lightning Storage Cells, and Overload TNT
+* [Processing Machines](machines/machines-index.md) — Lightning Simulation Room, Lightning Assembly Chamber, Overload Processing Factory, Crystal Catalyzer, Mining Factory, and Atmospheric Ionizer
+* [Materials & Items](materials/materials-index.md) — Overload materials, Lightning Collapse Matrix, Firmament materials, Floating Matter, and the Pigmee line
+* [Tianshu Matter Warping Matrix](matrix/matrix-index.md) — High-throughput parallel crafting for Molecular Assembler-compatible patterns
+* [Tianshu Supercomputer](tianshu/tianshu-index.md) — Shared crafting storage, concurrent dispatching, and closed-loop automation
+* [Tianshu Pattern Encoding Terminal](terminals/pattern-encoding-terminal.md) — Pattern encoding, auto-upload, upload aliases, closed-loop patterns, and inventory maintenance
+* [Tianshu Crafting Terminal](terminals/crafting-terminal.md) — Crafting, Smithing, Overload Alloy Anvil, Stonecutting, and Cell Workbench pages
+* [Overloaded Network](overloaded-network/overloaded-network-index.md) — Overloaded ME Controller, Overloaded Cable, Wireless Network, Overloaded Frequency Card, and network devices
+* [Overload Devices](devices-index.md) — Overload Device Workbench, Celestweave armor, and Electromagnetic Railgun

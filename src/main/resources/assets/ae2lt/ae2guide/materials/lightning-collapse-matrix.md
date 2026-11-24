@@ -12,33 +12,29 @@ item_ids:
 
 <ItemImage id="ae2lt:lightning_collapse_matrix" scale="2" float="left" />
 
-The **Lightning Collapse Matrix** is one of the key end-tier components in AE2 Lightning Tech. It is not a consumable — instead, it acts as a **substitution / parallelism catalyst**. Keeping a matrix in a machine's matrix slot unlocks the machine's higher-tier operating mode.
+The **Lightning Collapse Matrix** is a core late-game item installed into machine matrix slots to unlock lightning substitution, output multipliers, voltage step-up, or high parallelism.
 
 `A high-strength alloy compresses and confines immense lightning into a stable form; its waveform is the inverse of volatile Overload TNT.`
 
-~~Perhaps these energies can neutralize each other?~~
+> Name note: **Lightning Collapse Matrix** is this item component, distinct from the [Tianshu Matter Warping Matrix](../matrix/matrix-index.md) autocrafting multiblock.
 
-## How to Obtain
+## Obtaining
 
-### Crafting in the Lightning Simulation Room
+Crafted in either the [Lightning Simulation Room](../machines/lightning-simulation-chamber.md) or the [Overload Processing Factory](../machines/overload-processing-factory.md) using Extreme High Voltage Lightning and high FE power (check your recipe viewer for exact ingredients and energy costs in your pack).
 
-| Material | Amount |
-|----------|--------|
-| Perfect Electro-Chime Crystal | 1 |
-| Ultimate Overload Core | 16 |
-| **Extreme High Voltage Lightning** | 128 |
-| Energy | 50,000,000 AE |
+## Machine & Upgrade Uses
 
-Because the cost is already steep, you typically schedule this alongside your Overload Processing Factory and Lightning Assembly Chamber work.
+When placed in a machine's matrix slot, the matrix is **not consumed** and remains active while installed. Upgrading a Firmament Conversion Core consumes 1 matrix permanently:
 
-## As a Machine Catalyst
-
-The Lightning Collapse Matrix is **not consumed** during processing, but it must stay in the matrix slot:
-
-* [Lightning Simulation Room](../machines/lightning-simulation-chamber.md) / [Lightning Assembly Chamber](../machines/lightning-assembly-chamber.md) — with a matrix installed, some recipes that would normally require **Extreme High Voltage Lightning** can be fulfilled by consuming several times the amount of **High Voltage Lightning** instead.
-* [Tesla Coil](../lightning/tesla-coil.md) — Extreme High Voltage mode requires a matrix in the slot; without one, HV cannot be upconverted to EHV.
-* [Crystal Catalyzer](../machines/crystal-catalyzer.md) — applies in both Crystal Mode and Dust Mode; with a matrix installed, post-parallel per-operation output is increased to **4×**.
-* [Overload Processing Factory](../machines/overload-processing-factory.md) — multi-matrix parallelism: each additional matrix unlocks another tier of parallelism (up to 32 matrices in the slot, 8 parallel operations per matrix by default).
+| Target | Slot Limit | Effect |
+|--------|-----------:|--------|
+| [Lightning Simulation Room](../machines/lightning-simulation-chamber.md) / [Lightning Assembly Chamber](../machines/lightning-assembly-chamber.md) | 1 | Substitutes High Voltage Lightning for Extreme High Voltage recipes at a **4:1** ratio when EHV is insufficient |
+| [Overload Processing Factory](../machines/overload-processing-factory.md) | 32 | Covers remaining EHV deficits at a 4:1 HV ratio and grants 8 parallel operations per matrix by default (up to 256 at 32 matrices); sneak-right-click to quick-insert |
+| [Crystal Catalyzer](../machines/crystal-catalyzer.md) | 1 | Multiplies output by **8×** in both Crystal and Dust modes (not applicable to the Pigmee Crystal Catalyzer) |
+| [Tesla Coil](../lightning/tesla-coil.md) | 1 | Unlocks Extreme High Voltage mode to step up HV into EHV |
+| [Mining Factory](../machines/mining-factory.md) | 8 | Increases batch capacity by 256 blocks per matrix (base 8 blocks/batch without a matrix) |
+| [Overloaded IO Port](../overloaded-network/overloaded-io-port.md) | 8 | Scales attempts per cycle and per-operation transfer cap (reaching the signed 64-bit limit at 8 matrices) |
+| [Firmament Conversion Core](firmament-materials.md) | Consumes 1 | Sneak-right-click to upgrade in place: input capacity rises from 64 to 256 and batch size increases from 1 to 16 |
 
 ## Field Notes
 

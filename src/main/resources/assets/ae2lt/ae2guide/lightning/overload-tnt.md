@@ -14,39 +14,20 @@ item_ids:
   <BlockImage id="ae2lt:overload_tnt" scale="4" />
 </Row>
 
-**Overload TNT** is a high-risk explosive built around an Overload Singularity. Instead of producing a normal blast, it calls down repeated lightning strikes around the detonation point and scorches terrain over a wide area.
-
-It is mainly used for terrain excavation, hard-rock clearing, or controlled destructive testing.
+**Overload TNT** is a high-risk explosive built around an Overload Singularity and ignited with Flint and Steel, Fire Charges, or redstone. Rather than a standard explosion, it unleashes a multi-stage lightning blast.
 
 ## Crafting
 
 <RecipeFor id="ae2lt:overload_tnt" />
 
-The **Overload Singularity** is the active component; the gunpowder provides the explosive trigger.
-
 ## Detonation Behavior
 
-After ignition or activation, Overload TNT has a fuse of roughly **4 seconds**. On detonation, effects occur in the following sequence:
+Once primed, Overload TNT burns for an **80-tick (4-second)** fuse before scheduling a sustained lightning blast covering the initial strike, wide terrain destruction, entity lightning damage, and follow-up strikes, throttled by a server tick budget.
 
-1. A **lead-off lightning bolt** strikes directly above the blast center, followed by multiple bolts that fall outward in layered rings, **searing the terrain** — this is the primary destructive effect, and its range is large.
-2. At detonation, **all mobs in a wide area around the blast center take heavy lightning damage**. Damage falls off with distance, but the inner radius is lethal.
-3. After the first wave, a period of **aftershocks** continues for several seconds, dropping random additional strikes across the area.
-4. A short burst of **thunderstorm weather** is forced into the area around the blast center, reverting after about 8 seconds.
+* **Weather Effect**: In dimensions that support weather, detonation sets thunderstorm weather for **160 ticks (~8 seconds)** before normal world timers resume.
+* **Protection & Config**: Respects unbreakable special blocks and installed area-protection mods. `overloadTnt.enableTerrainDamage` in `ae2lt-common.toml` toggles standard blast effects.
 
-Overload TNT respects cleanup safeguards: **bedrock, barrier blocks, end portal frames, and command blocks** are not broken, and area-protected zones are respected.
-
-> Once Overload TNT detonates, it cannot be recovered. Treat it as a high-risk lightning event.
-
-## Configuration and Disabling
-
-`overloadTnt.enableTerrainDamage` in `ae2lt-common.toml` controls the normal blast and is
-**enabled** by default. When disabled, its lightning rain, terrain searing, thunderstorm, and mob
-damage are skipped.
-
-## Usage Tips
-
-* Place it on top of a **solid block**, keep a large safety distance, and prefer open terrain. The blast radius is large enough to catch players who remain near the detonation area.
-* If you want terrain damage without killing nearby mobs, move anything you want to preserve outside the blast area first.
+> Once primed, Overload TNT cannot be recovered. Keep a wide safety margin from structures and mobs.
 
 ## Field Log: An Anomalous Explosion
 

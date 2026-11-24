@@ -9,49 +9,26 @@ item_ids:
 
 # Lightning Simulation Room
 
-<Row>
-  <BlockImage id="ae2lt:lightning_simulation_room" scale="4" />
-</Row>
+<ItemImage id="ae2lt:lightning_simulation_room" scale="2" float="left" />
 
-The **Lightning Simulation Room** is one of the core processing machines of this mod, suited to conversions with 1~3 inputs. Most mid-game recipes are crafted here.
+The **Lightning Simulation Room** is the first lightning processing machine, running shapeless counted recipes of up to 3 inputs in a controlled environment to replace manual ground lightning conversions and craft mid-to-late-game materials.
 
 ## Obtaining
 
-The early-game lightning transformation recipe still produces 1 Simulation Room from **32 Overload Processors, 32 Overload Alloy Ingots, and 16 Overload Crystal Blocks**.
+* **Starter Lightning Conversion**: Drop the required ingredients on the ground and strike them with any lightning to obtain your first Lightning Simulation Room.
+* **Automated Crafting**: Later, craft additional units in the [Lightning Assembly Chamber](lightning-assembly-chamber.md) (check your recipe viewer for exact ingredients and energy costs).
 
-Once you have a [Lightning Assembly Chamber](lightning-assembly-chamber.md), process the same materials there for **1,000,000 FE** and **4 High Voltage Lightning** to automate production of Simulation Rooms.
+## Specifications & Operation
 
-## Slots and Capacity
+* **Inventory**: 3 input slots and 1 output slot, each holding up to **8,192** items, plus 1 matrix slot (limit 1).
+* **Energy Buffer**: **20,000,000 FE**, supplied via external FE cables.
+* **Upgrades**: Accepts up to 4 AE2 <ItemLink id="ae2:speed_card" />s to increase maximum FE processed per tick.
+* **Locking & Completion**: Once inputs match a recipe, the machine locks it and consumes FE over time. At completion, inputs, ME Lightning stock, and output space are re-verified before deducting Lightning and producing the output.
+* **Matrix Substitution**: Installing 1 <ItemLink id="ae2lt:lightning_collapse_matrix" /> allows Extreme High Voltage recipes to run entirely on High Voltage Lightning at a **4:1** ratio when EHV stock is insufficient.
+* **Automation**: Configure export sides and auto-export in the UI to return products directly to adjacent containers or pattern providers. The matrix slot is hidden from standard item automation.
 
-| Slot | Capacity | Notes |
-|------|----------|-------|
-| Input × 3 | 8,192 | Feed in the materials; slot order does not matter |
-| Matrix × 1 | 1 | Optional Lightning Collapse Matrix |
-| Output × 1 | 8,192 | Processed output; written by the machine only |
-| Speed Card Slots | — | Up to 4 AE2 Speed Cards |
+<OptionalSection modId="appflux">
+## Network FE Refill
 
-## Operating Flow
-
-1. Put up to 3 different ingredients into the input slots (recipes may only need 1~2)
-2. The machine matches the current inputs against registered recipes
-3. Once a recipe is matched and the ME network has enough Lightning and FE, the machine locks in the recipe and starts processing
-4. FE is spent during processing, and the required Lightning is consumed when the operation completes
-5. The output goes to the output slot when processing finishes
-
-## Lightning Consumption
-
-Every recipe defines the required Lightning type (HV or EHV) and amount. The machine checks Lightning availability before starting and consumes the required amount when the operation completes. If the network cannot supply enough Lightning, the GUI shows "Lightning insufficient" and the machine waits until supply recovers.
-
-## Matrix Substitution
-
-<ItemImage id="ae2lt:lightning_collapse_matrix" scale="2" float="left" />
-
-With a **Lightning Collapse Matrix** installed, some recipes that would normally require **Extreme High Voltage Lightning** can be fulfilled by consuming several times the amount of **High Voltage Lightning** instead. The ratio is defined per recipe. The GUI shows the current substitution state:
-
-* **Substitution: Active** — the current recipe is using HV Lightning to substitute for EHV
-* **Substitution: Available** — the current recipe supports substitution but has not triggered it
-* **Substitution: None** — the current recipe does not support substitution
-
-## Auto Export
-
-With Auto Export enabled, finished outputs are automatically pushed to adjacent containers on the allowed sides. The sides are configured in the "Configure Output Sides" screen of the GUI.
+With Applied Flux installed, the Simulation Room automatically refills its 20,000,000 FE internal buffer from FE stored in the connected ME network.
+</OptionalSection>

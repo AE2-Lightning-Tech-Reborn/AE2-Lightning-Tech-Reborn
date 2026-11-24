@@ -9,48 +9,35 @@ item_ids:
 
 # Overloaded IO Port
 
-<BlockImage id="ae2lt:overloaded_io_port" scale="4" />
+<ItemImage id="ae2lt:overloaded_io_port" scale="2" float="left" />
 
-Moves resources in bulk between storage cells and the ME network. It provides six input and six output slots and reuses the AE2 IO Port's empty, fill and eject settings, requiring a channel and network power.
+The **Overloaded IO Port** is a high-throughput storage cell transfer block built for rapidly emptying or filling massive item, fluid, and compatible resource cells with an ME network.
 
-## Transfer rate
+## Layout & Operating Parameters
 
-Each attempt moves one resource type, and all six input cells share the attempts per round in rotation. Up to 8 **Lightning Collapse Matrices** increase both the attempt count and the amount cap:
+* **Cell Slots**: 6 input slots and 6 output slots.
+* **Direction & Ejection**: Supports emptying cells into the network or filling cells from the network, ejecting cells to output slots when empty, full, or no further progress is possible.
+* **Automation Sides**: Top and bottom faces accept input cells; the four horizontal sides extract finished cells.
+* **Upgrades & Interval**: Accepts a <ItemLink id="ae2:redstone_card" /> and up to 4 <ItemLink id="ae2:speed_card" />s. Runs once every **5 ticks** by default, minus 1 tick per Acceleration Card (down to **1 tick** at 4 cards).
+* **Power**: Requires 1 channel and power (1 AE/t idle; transfer costs 1 AE per item and 8 AE per bucket of fluid, scaled by AE2 power multipliers). When power or target space is limited, it transfers only what can be paid for and stored.
 
-| Matrices | Attempts per round | Per-type cap (transfer units) |
-| --- | ---: | ---: |
+## Matrix Scaling & Throughput
+
+Insert **0–8** <ItemLink id="ae2lt:lightning_collapse_matrix" /> items to scale both attempts per cycle and per-operation transfer cap:
+
+* **Attempts per Cycle**: `min(16, 4 + 2 × matrices)`, **shared round-robin** across the 6 input cell slots. For example, with 6 loaded cells and 0 matrices (4 attempts/cycle), one cycle services 4 cells and the next cycle continues with the remaining ones.
+* **Per-Key Transfer Cap**: `8,388,608 × 32^matrices` transfer units (scaled by each resource type's per-operation unit), reaching `Long.MAX_VALUE` at **8 matrices**.
+
+| Matrices | Attempts / Cycle | Transfer Unit Cap per Operation |
+|---------:|-----------------:|--------------------------------:|
 | 0 | 4 | 8,388,608 |
 | 1 | 6 | 268,435,456 |
 | 2 | 8 | 8,589,934,592 |
-| 3 | 10 | 274,877,906,944 |
 | 4 | 12 | 8,796,093,022,208 |
-| 5 | 14 | 281,474,976,710,656 |
 | 6 | 16 | 9,007,199,254,740,992 |
-| 7 | 16 | 288,230,376,151,711,744 |
-| 8 | 16 | Long.MAX_VALUE |
+| 8 | 16 | `Long.MAX_VALUE` |
 
-Transfer units convert to native amounts using the resource type's AE2 amount per operation. Actual transfers are limited by source stock and destination capacity. `Long.MAX_VALUE` is 9,223,372,036,854,775,807.
+## Filtering & Overflow Recovery
 
-Install matrices in the right slot below the arrow. The interval starts at 5 ticks; each acceleration card removes one tick, up to four cards.
-
-## Power
-
-Transfer cost is the resource amount divided by its amount per operation, or **1 AE per item** and **8 AE per bucket** of fluid, plus **1 AE/t** idle power. The AE2 power multiplier applies. Insufficient power limits transfers to the affordable amount; transfers pause when no amount can be afforded.
-
-## Controls and automation
-
-* **Empty** sends cell contents into the network; **Fill** draws from the network into the cell.
-* Eject cells when empty, when full, or when a complete scan finds no transferable resources.
-* A redstone card enables ignore, high-signal and low-signal control.
-* Insert storage cells through the port's local top and bottom and extract finished cells through the other four sides; rotating the block changes these directions.
-* When output slots are full, cells wait in the input slots and can still be removed by hand.
-
-## Filter component
-
-The left slot below the arrow accepts an **Overloaded Filter Component** whose resource list is configured in a Cell Workbench; both filling and emptying then move only matching resources. A fuzzy card enables fuzzy matching and an inverter card turns the list into a blacklist.
-
-Filtered-out resources stay in their original storage and consume no attempts or power. With a nonempty filter list, empty ejection means the cell holds no permitted resources.
-
-## Recovery
-
-Resources that cannot be delivered return to their source first. If the source also rejects them, the port holds them and pauses transfers. Pending resources appear in the item tooltip and survive dismantling; reconnect the port to an ME network with free space to return them.
+* **Overloaded Filter Component**: Applies to both filling and emptying; supports Fuzzy Card matching and Inverter Card blacklisting. Filtered-out keys consume neither attempts nor AE transfer power.
+* **Pending Recovery**: Resources extracted from a source that cannot be inserted into the destination are returned to the source first; if that also fails, they are held safely inside the port and work pauses. Breaking the block preserves the pending payload in the dropped item until placed back with available space.

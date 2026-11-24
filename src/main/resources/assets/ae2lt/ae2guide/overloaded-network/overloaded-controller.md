@@ -9,56 +9,18 @@ item_ids:
 
 # Overloaded ME Controller
 
-<Row>
-  <BlockImage id="ae2lt:overloaded_controller" scale="4" />
-</Row>
+<ItemImage id="ae2lt:overloaded_controller" scale="2" float="left" />
 
-The **Overloaded ME Controller** is the upgraded version of the vanilla <ItemLink id="ae2:controller" /> and the core device of the Overloaded network. Each Overloaded controller supplies extra channels to the ME network, and provides a larger internal energy buffer with passive energy injection.
+The **Overloaded ME Controller** is a high-capacity replacement for AE2's <ItemLink id="ae2:controller" /> and the structural base shared by the [Wireless and Advanced Wireless Overloaded Controllers](wireless-network.md).
 
-## Core Features
+## Core Specifications
 
-* **Extra channel supply**: each Overloaded controller provides **128 channels** to the network (default, configurable)
-* **Internal energy capacity**: 16,000,000 AE
-* **Passive energy injection**: generates 100 AE per tick (default, configurable) and stores it in the controller itself, keeping some of the network running even without an external energy source
-* **Cable connections**: uses the Dense Smart cable connection type
+* **Channel Output**: Provides **128 channels** per controller block under default settings (scaled by AE2's active channel mode).
+* **Energy Buffer & Passive Generation**: Holds **16,000,000 AE** internally and passively generates **100 AE/t** by default to supply the connected ME grid.
+* **Multiblock Rules**: Follows standard AE2 controller geometry rules (maximum 7 blocks along any axis, no invalid cross-axis clustering, one contiguous controller multiblock per network).
 
-## Channel Supply Mechanics
+## Mixing & Channel Notes
 
-Channel allocation on an Overloaded network differs fundamentally from vanilla AE2:
-
-* **Vanilla AE2**: uses a BFS algorithm, with channels deducted segment-by-segment along the path. Each dense cable carries at most 32 channels.
-* **Overloaded network**: uses a **max-flow algorithm** to allocate channels globally.
-
-What this means for the player:
-
-* **Network total channels = Overloaded controller count × 128**
-* Overloaded cable has no per-cable channel bottleneck — a single cable can carry any number of channels
-* Placing more Overloaded controllers linearly scales the network's channel ceiling
-
-### Examples
-
-| Overloaded Controllers | Network Total Channels |
-|------------------------|------------------------|
-| 1 | 128 |
-| 2 | 256 |
-| 4 | 512 |
-| 8 | 1,024 |
-
-## How to Use
-
-The Overloaded ME Controller follows the same placement and multiblock rules as the vanilla controller.
-
-To give a controller multiblock wireless transmission, replace only **one** controller block with a [Wireless Overloaded Controller](wireless-network.md) or Advanced Wireless Overloaded Controller. It broadcasts the ME network that the whole controller multiblock belongs to, so the remaining blocks can stay regular Overloaded ME Controllers.
-
-For full effect, pair it with [Overloaded Cable](overloaded-cable.md).
-
-## Compared to the Vanilla Controller
-
-| Feature | Vanilla Controller | Overloaded ME Controller |
-|---------|--------------------|--------------------------|
-| Channel supply | 32 channels per controller face (routed along dense cable) | 128 channels per controller (max-flow global allocation) |
-| Internal energy capacity | Lower | 16,000,000 AE |
-| Passive energy injection | None | 100 AE per tick |
-| Channel allocation algorithm | BFS, segment-by-segment | Max-flow, global |
-
-> The Overloaded ME Controller keeps all of the basic behavior of the vanilla controller (multiblock, network management, etc.), and only enhances the channel and energy layers.
+* **Cannot Mix with Vanilla ME Controllers**: An ME network **cannot contain both Overloaded ME Controllers and vanilla AE2 ME Controllers**. Mixing them immediately forces a controller conflict (`CONTROLLER_CONFLICT`). Replace all vanilla controllers when upgrading a network.
+* **Mixing Overloaded Variants**: **Overloaded ME Controllers**, **Wireless Overloaded Controllers**, and **Advanced Wireless Overloaded Controllers** belong to the same controller family and may be combined freely in one multiblock.
+* **Effective Channels**: Total capacity scales with controller count and AE2's channel mode, while downstream availability remains bounded by the complete cable path. Run [Overloaded Cables](overloaded-cable.md) directly off controller faces to use full trunk capacity.

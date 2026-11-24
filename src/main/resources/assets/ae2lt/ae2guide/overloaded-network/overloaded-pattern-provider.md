@@ -13,155 +13,51 @@ item_ids:
 
 # Overloaded Pattern Provider
 
-<Row>
-  <BlockImage id="ae2lt:overloaded_pattern_provider" scale="4" />
-</Row>
+<ItemGrid>
+  <ItemIcon id="ae2lt:overloaded_pattern_provider" />
+  <ItemIcon id="ae2lt:overloaded_pattern_provider_upgrade" />
+  <ItemIcon id="ae2lt:overload_pattern_encoder" />
+  <ItemIcon id="ae2lt:overload_pattern" />
+  <ItemIcon id="ae2lt:overloaded_wireless_connect_tool" />
+</ItemGrid>
 
-The **Overloaded Pattern Provider** is the upgraded version of the vanilla <ItemLink id="ae2:pattern_provider" />, with **36 pattern slots** and a **wireless mode** for dispatching materials to remote machines across a distance.
-
-## Core Features
-
-* **36 pattern slots** (vanilla has 9)
-* **Two operating modes**: Normal and Wireless
-* **Overload Pattern support**: works with vanilla patterns, plus this mod's Overload Patterns
-* **Auto return**: automatically pulls processed outputs back from remote machines
-* **Import filter**: only allows results defined by the pattern back into the ME network
-* **Adaptive doubling**: dispatches multiple recipe copies from one crafting request
-
-## In-Place Upgrade
-
-<ItemImage id="ae2lt:overloaded_pattern_provider_upgrade" scale="2" float="left" />
-
-Use an **Overloaded Pattern Provider Upgrade** on a placed and configured provider to convert it in place while preserving its patterns, priority, redstone/blocking settings, and orientation. The following blocks are supported:
-
-* AE2 Pattern Provider
-* ExtendedAE Extended Pattern Provider
-* AdvancedAE Advanced Pattern Provider
-* AdvancedAE Advanced Extended Pattern Provider
-
-Each conversion consumes one upgrade item. Craft the upgrade from an Overloaded Pattern Provider and an ingot:
+The **Overloaded Pattern Provider** holds **36 patterns** and supports adjacent or same-dimension wireless face dispatch, active output return, adaptive batching, and per-slot NBT-ignoring Overload Patterns. Use an **Overloaded Pattern Provider Upgrade** on an existing compatible provider to upgrade it in place while preserving supported inventory and settings.
 
 <RecipeFor id="ae2lt:overloaded_pattern_provider_upgrade" />
 
-## Operating Modes
+## Overloaded Wireless Connect Tool
 
-### Normal Mode
+One tool manages wireless face connections for Overloaded Pattern Providers, Overloaded ME Interfaces, and Overloaded Power Supplies:
 
-In Normal Mode, the Overloaded Pattern Provider pushes materials into **physically adjacent** machines, identical to the vanilla Pattern Provider. The main difference is the larger number of pattern slots.
-~~Then why not use an Extended Interface?~~
+1. Right-click the source provider to select it.
+2. Right-click the target face on a machine to add a connection (right-click an already linked face to remove it).
+3. **Ctrl + Right-Click** toggles connections across adjacent connected identical blocks starting from the clicked target.
+4. Limits: **Same dimension only**, default max distance **128 blocks** (configurable; `0` disables distance checks), and up to **1,024** bound target faces per provider.
 
-### Wireless Mode
+## Dispatch Modes & Strategies
 
-<ItemImage id="ae2lt:overloaded_wireless_connect_tool" scale="2" float="left" />
+* **Normal vs. Wireless**: Normal mode pushes to adjacent targets; Wireless mode dispatches to bound target faces. One execution of a pattern goes to a single target; for machines requiring distinct faces per ingredient, use directional patterns or a compatible layout.
+* **Blocking & Distribution**: Standard blocking checks whether the target already contains relevant inputs; same-pattern blocking compares against the last accepted pattern. Distribution strategies control multi-target selection order.
+* **Adaptive Scaling**: Probes compatible targets and patterns to push larger batches based on active demand and available target space.
 
-In Wireless Mode, the Overloaded Pattern Provider can dispatch materials to remote machines across a distance. Use the **Overloaded Wireless Connect Tool** to establish wireless connections:
+## Output Return & Input Filtering
 
-1. Hold the Overloaded Wireless Connect Tool and **right-click** the Overloaded Pattern Provider to select it
-2. Right-click a specific face of a target machine to connect
-3. One provider can bind to multiple remote machines
+* **Return Modes**: Choose disabled, active auto-return, or passive acceptance of machine auto-exports.
+* **Active Return Timing**: Adjacent and wireless targets share one backoff poller—starting at **20 ticks** when active and backing off to **40 → 80 → 128 ticks** while idle. Any new dispatch or returned output resets the interval to **20 ticks**, and AUTO mode also sweeps completed outputs before dispatching new ingredients.
+* **Input Filtering**: When enabled, active extraction and passive acceptance only admit items matching outputs declared by loaded patterns (respecting Overload Pattern match rules). Disabling it allows undeclared byproducts and other extractable contents from the target face.
 
-Wireless links must be in the same dimension and within **128 blocks** by default. The distance limit is configurable; setting it to 0 disables the limit. One provider can store up to **1,024** wireless connections. Hold **Ctrl** while right-clicking a target to batch-toggle contiguous machines of the same type.
+<OptionalSection modId="mekanism">
+* **Mekanism Chemical Support**: With Mekanism installed, providers support item, fluid, and chemical I/O through compatible machine sides and adapters.
+</OptionalSection>
 
-Once connections are in place, the provider dispatches materials to the remote machines according to the selected distribution strategy.
+<OptionalSection modId="appflux">
+* **Applied Flux Induction Card**: Installing an Induction Card lets the provider supply FE to its target machines (independent of Frequency Card FE settings on the machine itself).
+</OptionalSection>
 
-The provider treats all linked machines as the same kind of processing machine. It cannot dispatch to the multiple input buses or input hatches of multiblock machines such as those in MI, and it cannot automatically split one pattern's contents across different containers; doing so can stall the craft.
+## Overload Patterns & Encoder
 
-### Distribution Strategies
+Use **Overload Patterns** when recipes involve varying durability, enchantments, or NBT components:
 
-| Strategy | Description |
-|----------|-------------|
-| Round Robin | Dispatches to one remote machine at a time, in order |
-| Balanced Distribution | Distributes materials evenly across all connected remote machines |
-
-## Interface and Advanced Settings
-
-The left toolbar on the main screen contains controls for operating mode, return mode, adaptive doubling, and blocking mode. Select the cog button to open **Advanced Settings**, which contains:
-
-* Wireless dispatch strategy: Round Robin / Balanced Distribution
-* Wireless probe speed: Normal / Fast
-* Input filtering: OFF / ON
-
-Wireless dispatch and probe settings only take effect in Wireless Mode.
-
-## Adaptive Doubling
-
-Adaptive Doubling is disabled by default. When enabled and a crafting request contains several copies of the same pattern, the first dispatch starts small and gradually increases the number of copies sent at once. For each target and pattern, later dispatches start from the last chunk that entered completely without overflow, repeat that chunk once, and then continue doubling. If that starting chunk is rejected, the provider halves it until one chunk succeeds; overflow keeps the normal pending-send behavior and lowers the next starting chunk.
-
-Before enabling it, make sure the target can hold and correctly process several recipe copies at once. Some machines or input layouts do not support batched ingredients and may mix recipes or stall the craft; disable Adaptive Doubling in those cases.
-
-When disabled, each push sends only one recipe copy. Directional patterns and patterns that cannot push inputs to an external inventory do not use Adaptive Doubling.
-
-## Blocking Mode
-
-| Mode | Description |
-|------|-------------|
-| OFF | Does not inspect the target for pattern inputs |
-| Normal | Pauses dispatch while the target still contains an input used by any loaded pattern |
-| Continue Same Pattern | Allows another dispatch when the same pattern was the last one successfully sent to that target; other patterns remain blocked |
-
-Use Continue Same Pattern when a machine can safely hold several copies of one recipe. If it must finish one copy before receiving the next, use Normal blocking.
-
-## Return Mode
-
-The return mode determines how processed output is recovered from remote machines:
-
-| Mode | Description |
-|------|-------------|
-| OFF | No auto return |
-| AUTO | Actively pulls output back from the remote machines |
-| EJECT | Remote machines push output into the virtual output slot; the provider accepts it passively |
-
-Before AUTO dispatches new work to a target, the provider pulls completed output
-from that target once for the current server tick. This keeps a full machine
-output slot from blocking the next dispatch. A provider-wide safety sweep checks
-all linked targets over 20 ticks. Completely idle sweeps back off to 40, 80 and
-finally 128 ticks; dispatch activity or matching output restores the 20-tick
-interval. EJECT remains purely passive.
-
-## Speed Tier
-
-| Speed | Description |
-|-------|-------------|
-| Normal | Standard cooldown (5 ~ 80 ticks) |
-| Fast (Probe) | Adaptive cooldown; uses a probe mechanic to detect readiness early (1 ~ 40 ticks) |
-
-Speed tier affects dispatch retry/probing only. AUTO output return uses the
-provider-wide sweep described above.
-
-## ME Power Cost
-
-Dispatching materials and returning products consumes ME network power. For large crafting batches, make sure the network has a large enough AE energy buffer; if power is insufficient, the provider waits until more power is available.
-
-Wireless Mode, wireless links, and Fast probing also increase idle power usage.
-
-## Import Filter
-
-With "Filtered Import" disabled, AUTO pulls every item, fluid or other resource that the connected face allows extracting, including byproducts absent from the patterns. It also works with no patterns installed. Inputs or catalysts will also be pulled back if the machine allows extracting them from that face.
-
-Normal mode follows the provider's facing; all-sides mode checks every active adjacent face and can also pull storage cells from a neighboring ME Drive. Use a wrench to face a single machine when that is the intended target. Wireless mode follows each connection's bound machine face.
-
-With "Filtered Import" enabled, both AUTO extraction and passive returns only accept outputs listed in the loaded patterns; no pattern outputs means no return. Overload patterns retain each output's exact or ID-only matching setting.
-
-## Overload Pattern and Overload Pattern Encoder
-
-<Row>
-  <ItemImage id="ae2lt:overload_pattern" scale="2" />
-  <ItemImage id="ae2lt:overload_pattern_encoder" scale="2" />
-</Row>
-
-The **Overload Pattern** is a specialty pattern, **only usable in the Overloaded Pattern Provider**. Use the **Overload Pattern Encoder** to encode it.
-
-The Overload Pattern Encoder supports:
-
-* Setting primary input and primary output
-* Setting byproducts
-* An **Ignore NBT** switch: when enabled, item matching ignores NBT data
-
-## Automation Tips
-
-* In large automated crafting systems, Wireless Mode can dramatically reduce pipe complexity
-* Combined with the Balanced Distribution strategy and multiple processing machines, it enables parallel crafting without extra item pipes
-* Enable the Fast speed tier for better responsiveness
-* Pick the return mode that matches the specific automation scenario
-* Combine Adaptive Doubling with multiple equivalent machines to process large requests
-* Disable Adaptive Doubling when a target has little input space or cannot accept batched ingredients
+1. Insert any valid **processing pattern** (or existing Overload Pattern) as the source pattern in the **Overload Pattern Encoder**; ingredients and counts are inherited from the source.
+2. Click individual input or output slots in the preview to toggle each slot between **Ignore NBT: Off** (strict full-component match) and **Ignore NBT: On** (item ID only).
+3. Encode to produce the **Overload Pattern**. You can also encode Overload Patterns directly in the [Tianshu Pattern Encoding Terminal](../terminals/pattern-encoding-terminal.md).

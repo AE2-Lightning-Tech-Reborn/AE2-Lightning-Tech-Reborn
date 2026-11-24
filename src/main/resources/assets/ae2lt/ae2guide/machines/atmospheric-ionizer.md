@@ -12,15 +12,13 @@ item_ids:
 
 # Atmospheric Ionizer
 
-<Row>
-  <BlockImage id="ae2lt:atmospheric_ionizer" scale="4" />
-</Row>
+<ItemImage id="ae2lt:atmospheric_ionizer" scale="2" float="left" />
 
-The **Atmospheric Ionizer** is a weather control device. It consumes **Weather Condensate** and AE energy to force the world's weather to a specific state, letting you feed the Lightning Collector with reliable natural lightning strikes.
+The **Atmospheric Ionizer** spends AE power directly from the ME network together with a **Weather Condensate** to change the current dimension's weather.
 
-## Weather Condensate
+## Condensates & Costs
 
-There are three types of Weather Condensate, one per weather state:
+All three Weather Condensates are crafted on a crafting table:
 
 <ItemGrid>
   <ItemIcon id="ae2lt:clear_condensate" />
@@ -28,23 +26,15 @@ There are three types of Weather Condensate, one per weather state:
   <ItemIcon id="ae2lt:thunderstorm_condensate" />
 </ItemGrid>
 
-| Condensate | Target Weather | AE Cost | Duration |
-|------------|----------------|---------|----------|
-| Clear Condensate | Clear | 500,000 AE | 12,000 ~ 180,000 ticks |
-| Rain Condensate | Rain | 1,000,000 AE | 12,000 ~ 24,000 ticks |
-| Thunderstorm Condensate | Thunderstorm | 8,000,000 AE | 3,600 ~ 15,600 ticks |
+| Condensate | Target Weather | Total AE Cost | Resulting Weather Duration (ticks) |
+|------------|----------------|--------------:|-----------------------------------:|
+| **Clear Condensate** | Clear | 500,000 AE | 12,000–180,000 |
+| **Rain Condensate** | Rain | 1,000,000 AE | 12,000–24,000 |
+| **Thunderstorm Condensate** | Thunderstorm | 8,000,000 AE | 3,600–15,600 |
 
-## Operating Flow
+## Operating Rules
 
-1. Connect the Atmospheric Ionizer to the ME network
-2. Put the required Weather Condensate into the input slot
-3. The machine continuously pulls AE from the ME network to ionize
-4. Once ionization is complete, the world weather is forced to the target state
-5. The condensate is consumed
-
-## Notes
-
-* The Atmospheric Ionizer consumes **AE energy** from the ME network, not FE
-* Thunderstorm Condensate has the highest single-use cost (8,000,000 AE) — make sure the network has enough energy on hand
-* In dimensions that do not support weather, the machine cannot work
-* When the target weather is already the current weather, the machine does not consume condensate
+* **Power Model**: Draws **AE power** directly from the ME network; requires no FE buffer and no stored Lightning, and has no upgrade slots.
+* **Cycle**: Spreads the AE cost across **100 powered ticks** and consumes 1 condensate only when the weather change succeeds.
+* **Dimension & State Checks**: Does not operate in dimensions without weather (such as the Nether or the End), and waits without consuming a condensate if the world is already in the target weather state.
+* **Natural Strikes**: Triggering a thunderstorm establishes the weather required for natural lightning; actual strike timing and locations remain governed by Minecraft's weather system independently of the ionizer's 100-tick cycle.

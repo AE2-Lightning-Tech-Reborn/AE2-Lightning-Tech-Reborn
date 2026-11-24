@@ -1,6 +1,6 @@
 ---
 navigation:
-  title: Main Cores, Peripheral Units, and Heat
+  title: Main Cores, Peripheral Units & Heat
   icon: ae2lt:matter_warping_matrix_stable_main_core
   parent: matrix/matrix-index.md
   position: 20
@@ -15,112 +15,66 @@ item_ids:
   - ae2lt:matter_warping_matrix_thermal_control_unit_t2
 ---
 
-# Main Cores, Peripheral Units, and Heat
+# Main Cores, Peripheral Units & Heat
 
-The core chamber contains 81 positions. Its geometric center must hold one Main Core, and the remaining 80 positions must all contain Peripheral Units. The scene below removes the outer structure to show an example configuration. It distinguishes the available core positions and is not the only or universally optimal layout.
+The core chamber holds **81 blocks**: **1 Main Core** at the exact center and **80 valid peripheral units** filling the surrounding positions. The scene below hides the shell to show one valid **Quantum Main Core** layout (1 Quantum Main Core, 6 adjacent Thermal Control Unit T1s, 10 Tianshu Amplifier Units, and 64 Thread Unit T1s).
 
 <GameScene zoom="3" background="transparent" interactive={true}>
   <ImportStructure src="../assets/assemblies/matter_warping_matrix_core.snbt" />
-  <BoxAnnotation min="3 5 3" max="4 6 4" color="#f2d37a" alwaysOnTop={true}>The only valid main-core position</BoxAnnotation>
+  <BoxAnnotation min="3 5 3" max="4 6 4" color="#f2d37a" alwaysOnTop={true}>Main Core Position</BoxAnnotation>
   <IsometricCamera yaw="215" pitch="25" />
 </GameScene>
 
-# Quick Overview
+## Main Core Tiers
 
-## Core Structure and Units
-
-Before using auto-build, make sure the volume extending 3 blocks to either side of the Controller, 5 blocks above and below it, and 6 blocks behind it contains no unrelated blocks. Otherwise, auto-build cannot complete.
-
-The core chamber supports Thread, Thermal Control, and Amplifier Units as specialized Peripheral Units, as well as Blank Units. Only a Main Core may occupy the center position. Thread and Thermal Control Units each have T1 and T2 variants, with T2 offering better performance than T1.
-
-Thread Units determine the crafting capacity per tick, similar to adding more Molecular Assemblers. Thermal Control Units regulate heat, but their effectiveness decreases with distance from the Main Core. Amplifier Units multiply overall thread capacity, and no more than 15 may be installed. Blank Units fill required positions without providing bonuses.
-
-> The Multidimensional Main Core cannot use specialized Peripheral Units; all other positions must contain Tianshu Blank Units. The Stable Main Core cannot use Amplifier Units.
-
-Every position in the core chamber must be filled or the structure will not form. Higher-tier Main Cores provide higher capacity limits, summarized below. The structure also requires at least one Pattern Storage.
-
-| Main Core | Crafting Cap per Tick | Thermal Strategy |
-|-----------|----------------------:|------------------|
-| Stable Main Core | 4,096 executions | Keep heat as low as possible |
-| Quantum Main Core | 122,880 executions | Lower heat provides higher efficiency |
-| Overload Main Core | 4,194,304 executions | Keep heat near 50% |
-| Multidimensional Main Core | Unlimited | Heat is ignored |
-
-## Outer Structure
-
-Pattern Storages may be installed in the upper and lower internal layers of the structure to provide pattern slots. They can be installed or replaced directly through the Controller's auto-build and pattern-upgrade functions without opening the structure.
-
-By default, the Matrix Port is installed opposite the Controller. It may instead occupy either side candidate position, but the structure must contain exactly one Port to form.
-
-## Main Core Modes
-
-| Main Core | Crafting Cap per Tick | Thermal Strategy |
-|-----------|----------------------:|------------------|
-| Stable Main Core | 4,096 executions | Keep it cool; efficiency falls with heat but never below 45% |
-| Quantum Main Core | 122,880 executions | Lower heat provides higher efficiency |
-| Overload Main Core | 4,194,304 executions | Peak efficiency is near 50% heat; keep it in the 42%–58% sweet spot |
-| Multidimensional Main Core | Unlimited | Heat is ignored; all other 80 slots must be Tianshu Blank Units |
-
-The number of pattern executions the matrix performs each tick is determined in three steps:
-
-1. **Base capacity**: Stable uses dedicated values: each T1 Thread Unit provides `1,024`, each T2 provides `3,584`, and the total is capped at `4,096`. Quantum and Overload use `256 × thread points × amplification factor`; T1 provides 1 thread point and T2 provides 2. The amplification factor is `R²` for Quantum and `R³` for Overload, where `R = 1 + the number of Tianshu Amplifier Units`.
-2. Base capacity beyond the Main Core's per-tick cap is cut off at the cap.
-3. The result is multiplied by the current thermal efficiency to give the actual throughput.
-
-The Multidimensional Main Core has no execution cap, but the matrix still issues at most 16,384 crafting calls per tick. Matrix throughput depends only on its own core configuration and heat; it is independent of the Tianshu Supercomputer's dispatch and copy budgets.
+| Main Core | Copy Cap / Tick | Allowed Amplifiers | Thermal Efficiency |
+|-----------|----------------:|--------------------|--------------------|
+| **Stable Main Core** | 4,096 | 0 (unsupported) | Keep cool; `clamp(1 − h, 0.45, 1)` (45% floor) |
+| **Quantum Main Core** | 122,880 | 0–15 | Keep cool; `clamp(1 − h, 0.45, 1)` (45% floor) |
+| **Overload Main Core** | 4,194,304 | 0–15 | Peaks at **50%** heat; `0.05 + 0.95 × [4h(1 − h)]⁵` |
+| **Multidimensional Main Core** | Unbounded copies | 0 (all 80 slots must be Tianshu Blank Units) | Fixed 100%, ignores heat |
 
 ## Peripheral Units
 
-| Peripheral Unit | Provides | Purpose |
-|-----------------|----------|---------|
-| Thread Unit T1 | Stable: 1,024; Quantum/Overload: 1 thread point | Raises base crafting capacity per tick |
-| Thread Unit T2 | Stable: 3,584; Quantum/Overload: 2 thread points | Provides dedicated Stable capacity; in Quantum and Overload, two thread points per slot save core positions |
-| Tianshu Amplifier Unit | `R` +1 | Raises the amplification factor of Quantum and Overload cores; the same block is shared with the Tianshu Supercomputer |
-| Thermal Control Unit T1 | 1 cooling point | Raises heat capacity and cooling rate; the actual effect decays with distance from the Main Core |
-| Thermal Control Unit T2 | 2 cooling points | Twice the cooling points per slot, with the same distance decay |
-| Tianshu Blank Unit | — | Shared by both Tianshu multiblocks; fills a required core slot without adding performance attributes |
+| Unit | Contribution | Notes & Restrictions |
+|------|--------------|----------------------|
+| **Thread Unit T1** | Stable `1,024`; Quantum/Overload `1` thread pt | Raises base throughput; finite cores require at least 1 Thread Unit |
+| **Thread Unit T2** | Stable `3,584`; Quantum/Overload `2` thread pts | Higher density per core slot |
+| **Tianshu Amplifier Unit** | `R + 1` (shared block with Supercomputer) | Quantum and Overload cores only; max **15** (16th prevents formation) |
+| **Thermal Control Unit T1** | `1` cooling pt | Increases heat capacity and cooling rate; decays with distance from center |
+| **Thermal Control Unit T2** | `2` cooling pts | Double cooling points with the same distance decay |
+| **Tianshu Blank Unit** | — | Filler block; mandatory for all 80 peripheral slots with a Multidimensional Main Core |
 
-Quantum and Overload configurations allow at most **15 Tianshu Amplifier Units**; a sixteenth prevents the structure from forming. Stable and Multidimensional Main Cores reject amplifiers.
+## Throughput Calculation
 
-## Cooling Distance
+Effective craft copies per tick are computed in three steps:
 
-Thermal Control Units scale their effective power by Manhattan distance from the central Main Core:
+1. **Base Capacity**:
+   * **Stable**: `1,024 × T1 + 3,584 × T2` (capped at `4,096`).
+   * **Quantum**: `256 × P × R²`, where `P = T1 + 2 × T2` thread points and `R = 1 + Amplifiers`.
+   * **Overload**: `256 × P × R³`.
+2. **Tier Cap**: Clamped to the Main Core's per-tick copy cap.
+3. **Thermal Efficiency**: Multiplied by the current thermal efficiency and rounded down.
 
-| Distance | Effective Cooling Power |
-|---------:|------------------------:|
-| 1 block | 100% |
-| 2 blocks | 75% |
-| 3 blocks | 50% |
-| 4 blocks | 25% |
-| 5 or more blocks | 0% |
+> Regardless of core tier (including Multidimensional), the matrix is capped at **16,384** craft invocations per tick in addition to material and AE power limits. Matrix throughput is independent of the Tianshu Supercomputer's dispatch and copy budgets.
 
-## Heat and Cooling Formulas
+## Thermal Distance & Heat Formula
 
-First calculate the effective cooling points from all Thermal Control Units:
+Thermal Control Units scale by **Manhattan distance** (`|dx| + |dy| + |dz|`) from the central Main Core:
 
-`C = Σ(unit cooling points × distance multiplier)`
+| Manhattan Distance | Effective Weight |
+|-------------------:|-----------------:|
+| 1 | 100% |
+| 2 | 75% |
+| 3 | 50% |
+| 4 | 25% |
+| 5+ | 0% |
 
-A T1 unit provides 1 point and a T2 unit provides 2 points. The distance multiplier comes from the table above. For example, a T2 unit 2 blocks from the Main Core contributes `2 × 75% = 1.5` effective cooling points.
-
-Effective cooling points determine both heat capacity and the cooling rate per tick:
-
-* **Heat capacity:** `K = 2048 + 150 × C`
-* **Cooling rate:** `r = 0.00008 + 0.000025 × C`
-* **Displayed heat:** `h = clamp(H ÷ K, 0, 1)`
-
-Here, `H` is the matrix's currently stored heat and `h` is the 0%–100% heat shown by the Controller. The cooling rate is proportional rather than fixed: while idle, the heat remaining after each tick is `H_next = H_current × (1 - r)`. For example, when `C = 20`, heat capacity is `5,048` and the matrix dissipates `0.058%` of its current heat each tick.
-
-While the matrix is working, it generates heat from its actual load before applying that tick's cooling:
-
-`H_next = (H_current + P × g × L) × (1 - r)`
-
-* `P` is the total thread-point count: each T1 Thread Unit provides 1 point and each T2 provides 2
-* `L` is the pattern executions accepted by the matrix this tick divided by the available executions, clamped to 0–1; it is 0 while idle
-* Stable and Quantum Main Cores use the heat-generation coefficient `g = 0.256`
-* The Overload Main Core uses `g = 1.2032`
-
-Heat then affects actual throughput through thermal efficiency:
-
-* **Stable and Quantum:** `efficiency = clamp(1 - h, 0.45, 1)`, so efficiency never falls below 45%
-* **Overload:** `efficiency = 0.05 + 0.95 × [4h(1 - h)]⁵`, peaking at `h = 50%`
-* **Multidimensional:** fixed at 100%; it neither reads nor accumulates heat
+* **Effective Cooling**: `C = Σ(cooling points × distance weight)` (T1 = 1, T2 = 2).
+* **Heat Capacity**: `K = 2048 + 150 × C`.
+* **Cooling Rate per Tick**: `r = 0.00008 + 0.000025 × C`.
+* **Displayed Heat**: `h = clamp(H / K, 0, 1)`.
+* **Tick Update**: Heat is added from load, then dissipated proportionally:
+  `H_next = (H_current + P × g × L) × (1 − r)`
+  * `P` is total thread points; `L` is `accepted copies / available copies` clamped to `[0, 1]` (`0` when idle).
+  * Heat factor `g = 0.256` for Stable/Quantum, and `g = 1.2032` for Overload.

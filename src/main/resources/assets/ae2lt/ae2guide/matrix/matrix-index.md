@@ -8,24 +8,15 @@ navigation:
 
 # Tianshu Matter Warping Matrix
 
-The **Tianshu Matter Warping Matrix** is a large ME-network crafting multiblock. It executes patterns stored in its Pattern Storages, using configurable dispatch, amplification, and thermal control for high-throughput production of base materials and intermediate components.
+The **Tianshu Matter Warping Matrix** is a large-scale crafting multiblock built to store and execute **Molecular Assembler-compatible patterns** (crafting, stonecutting, smithing, etc.) in massive parallel batches, replacing sprawling walls of Molecular Assemblers.
 
-The matrix is a **crafting provider**, not crafting storage. An ME Crafting CPU still plans each job and supplies its ingredients. The matrix accepts the work, assembles the results, and inserts them directly back into the network.
+> Role separation: the **Matter Warping Matrix** stores patterns and executes Molecular Assembler-compatible crafts, while crafting CPUs (such as the [Tianshu Supercomputer](../tianshu/tianshu-index.md)) plan and schedule crafting jobs.
 
 <SubPages />
 
-## Basic Workflow
+## Key Features
 
-1. [Build the fixed 7×11×7 structure](construction.md), place one Main Core at its center, and fill the remaining 80 Peripheral Unit positions
-2. Insert patterns into at least one Pattern Storage
-3. Connect the Matrix Port to a powered ME network
-4. Request a crafting job from an ME terminal; the matrix participates as a provider for its stored patterns
-
-## Operating Requirements
-
-* The structure must be formed and its core configuration must be valid
-* Exactly one Matrix Port and one main core must be present
-* At least one Pattern Storage must be installed
-* The port must be connected to an active ME network; its fixed idle power usage is **8 AE/t**, and the formed multiblock consumes **1 channel**. While working, the matrix also consumes **1 AE** for every pattern copy it successfully accepts
-
-The structure requires no external FE and does not directly consume Lightning.
+* **Fixed Footprint**: 7×11×7 multiblock connecting to the ME network through a single port, consuming only **1 channel** total.
+* **Power**: **8 AE/t** idle drain plus **1 AE** per accepted craft copy (insufficient network power caps copies executed per tick).
+* **Scalable Pattern Storage**: 50 pattern bay positions accepting any mix of T1 (36 slots), T2 (72 slots), and T3 (288 slots) Pattern Storages—up to **14,400** slots at full T3—with in-place upgrades and one-click pattern migration from the controller.
+* **Configurable Core Bay**: An 81-block core chamber holding 1 Main Core and 80 peripheral units to balance thread throughput, amplification, and thermal control.

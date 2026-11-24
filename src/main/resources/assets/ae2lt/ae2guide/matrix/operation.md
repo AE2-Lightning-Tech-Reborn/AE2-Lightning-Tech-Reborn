@@ -1,6 +1,6 @@
 ---
 navigation:
-  title: Patterns, Port, and Operation
+  title: Patterns, Port & Operation
   icon: ae2lt:matter_warping_matrix_pattern_storage_t1
   parent: matrix/matrix-index.md
   position: 30
@@ -12,58 +12,44 @@ item_ids:
   - ae2lt:dense_topological_lattice
 ---
 
-# Patterns, Port, and Operation
+# Patterns, Port & Operation
 
-## Pattern Storage
+<ItemGrid>
+  <ItemIcon id="ae2lt:matter_warping_matrix_pattern_storage_t1" />
+  <ItemIcon id="ae2lt:matter_warping_matrix_pattern_storage_t2" />
+  <ItemIcon id="ae2lt:matter_warping_matrix_pattern_storage_t3" />
+  <ItemIcon id="ae2lt:matter_warping_matrix_pattern_storage_upgrade" />
+  <ItemIcon id="ae2lt:dense_topological_lattice" />
+</ItemGrid>
 
-The structure provides 50 optional Pattern Storage positions. At least one storage is required for the matrix to form.
+## Pattern Storage Tiers & In-Place Upgrades
 
-| Pattern Storage | Capacity each | Total with all 50 installed |
-|-----------------|--------------:|----------------------------:|
-| T1 | 36 | 1,800 |
-| T2 | 72 | 3,600 |
-| T3 | 288 | 14,400 |
+The 50 bay slots accept any combination of three storage tiers:
 
-T1, T2, and T3 storages may be mixed in one structure. The total capacity is the sum of every installed storage, with one encoded pattern per slot.
+| Pattern Storage | Slots per Block | Total at 50 Blocks |
+|-----------------|----------------:|-------------------:|
+| **Pattern Storage T1** | 36 | 1,800 |
+| **Pattern Storage T2** | 72 | 3,600 |
+| **Pattern Storage T3** | 288 | 14,400 |
 
-## Inserting and Removing Patterns
+* **Supported Pattern Types**: Each slot holds 1 decoded pattern belonging to **Molecular Assembler-compatible categories** (crafting, stonecutting, smithing, etc.). Processing patterns for external machines are not accepted.
+* **In-Place Upgrades**: Trigger upgrades directly from the Controller UI without dismantling the structure; stored patterns remain intact:
+  * Consumes **Pattern Storage Upgrade** from your inventory to upgrade **T1 → T2**.
+  * Consumes **Dense Topological Lattice** from your inventory to upgrade **T2 → T3**.
+  * A T1 bay upgraded to T2 during one action will not immediately chain-upgrade to T3 in the same pass. Breaking a bay block directly drops its stored patterns.
 
-Once the matrix is formed and connected to an active ME network, all of its pattern slots appear as a group represented by the Matrix Port in the **Pattern Access Terminal**. Patterns can be inserted, replaced, or removed there without opening the outer structure.
+## Port Connection & Pattern Management
 
-Right-clicking the Matrix Port opens a **pattern management** screen. Use the arrows in the upper left to select a warehouse, then browse, search, and manage its patterns. Only one warehouse is synchronized at a time, even in a full 14,400-slot matrix.
+* **ME Connection & Power**: Once formed, the **Matter Warping Matrix Port** connects on all six faces using **1 channel**, **8 AE/t** idle, and **1 AE** per accepted craft copy. Unforming or partial chunk unloading halts supply until chunks reload and rescan.
+* **Management Interfaces**:
+  * **Port GUI**: Browse, search, and edit patterns bay by bay.
+  * **ME Pattern Access Terminal**: Exposes the aggregated pattern inventory through the port.
+  * **Item Automation**: Inserting valid patterns via item capability routes them into available writable bay slots.
 
-The Matrix Port also exposes item insertion for automation. Item pipes can insert patterns into available slots. Breaking a Pattern Storage drops its stored patterns; upgrading it in place from the Controller preserves them.
+## Migrate Patterns
 
-## Upgrading Pattern Storage
+When the matrix is formed and online, open **Migrate Patterns** in the Controller UI to move eligible Molecular Assembler-compatible patterns from supported sources across the same ME network into the matrix:
 
-Place Tianshu Matter Warping Matrix Pattern Storage Upgrades in the player inventory, then use **Upgrade** from the Controller. The matrix replaces T1 storages with T2 storages in place, limited by the number of upgrades carried:
-
-* One upgrade item is consumed per upgraded storage
-* Stored patterns are preserved
-* If too few upgrades are available, only the affordable number is upgraded
-* No upgrade items are consumed when no T1 storages remain
-
-Each **Dense Topological Lattice** in the player inventory also upgrades one existing T2 warehouse to T3 in place. A T1 upgraded during the same action remains T2 until the next action. Both upgrades preserve stored patterns. A T3 warehouse can also be crafted directly from a T2 warehouse and one Dense Topological Lattice.
-
-## Matrix Port
-
-Exactly one Port must be installed. Any of the three candidate positions is valid. When no existing Port is found, auto-build places it directly opposite the Controller.
-
-The Port:
-
-* Connects the internal AE nodes of the Pattern Storages to the ME network; each warehouse advertises its own patterns and receives its matching crafting requests
-* Provides shared network access, pattern management, and automated insertion for all warehouses
-* Lets the warehouse validate each request before the matrix executes it and returns results to the network
-* Accepts ME cable connections on all six sides only after formation; cables cannot connect while the structure is unformed. It has a fixed idle cost of 8 AE/t, and the formed multiblock consumes 1 channel
-
-In addition to its fixed idle cost, the matrix consumes **1 AE** for every pattern copy it successfully accepts. If it accepts a given number of pattern copies during one tick, that tick consumes the same amount of additional AE on top of the 8 AE/t idle cost. When available power is insufficient, the matrix limits that tick's work to the number of copies the network can pay for. It accepts no new crafting work while the Port is disconnected from a powered network or belongs to an unformed structure.
-
-The matrix does not force-load any chunk in its footprint. If any structure chunk is unloaded, the Port disconnects and work pauses without clearing patterns, jobs, or the last confirmed structure data. It rescans and reconnects automatically after the complete structure is loaded again. A cross-chunk build therefore needs a chunk loader covering the whole matrix.
-
-## Troubleshooting
-
-* **Structure does not form:** Check the central Main Core, all 80 Peripheral Units, at least one Pattern Storage, the unique Port, and every fixed shell position
-* **Auto-build does nothing:** Remove invalid blocks from target positions and verify that all materials are in the player inventory
-* **Port is absent from the network:** Check the cable connection, network power, and formation state
-* **Port stays offline after a cross-chunk load:** Ensure the chunk loader covers the entire matrix and allow time for the automatic rescan
-* **A stored pattern is not selected for a job:** Confirm that the pattern is stored in this matrix and that the Port is online, then check for other providers advertising the same pattern
+* **Idle Requirement**: The network and target sources must be idle; active crafting jobs pause or block migration.
+* **Deduplication & Stopping**: Moves only valid physical patterns when free bay slots exist, recycles duplicate patterns automatically, and tracks moved vs. recycled counts separately. Clicking **Stop Migration** preserves already completed moves.
+* **Recovery**: Reports skipped pattern disks, non-standard slots, insertion failures, or source changes by category. Any returned patterns that could not fit into ME storage or your inventory can be claimed by reopening the migration UI after freeing space.

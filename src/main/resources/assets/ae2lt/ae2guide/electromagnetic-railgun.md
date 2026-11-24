@@ -20,87 +20,49 @@ item_ids:
 
 # Electromagnetic Railgun
 
-<Row>
-  <ItemImage id="ae2lt:electromagnetic_railgun" scale="4" />
-</Row>
+<ItemImage id="ae2lt:electromagnetic_railgun" scale="2" float="left" />
 
-The **Electromagnetic Railgun** is a modular overload weapon. It requires a bound ME network for Lightning ammunition and a local FE buffer for charging and firing.
+The **Electromagnetic Railgun** is a network-bound modular weapon offering continuous beam fire and three-tier charged shots. Bind it to an ME network and install an <ItemLink id="ae2lt:ultimate_overload_core" /> in the [Overload Device Workbench](devices-index.md) before firing.
 
-## Required Setup
+## Core Requirements
 
-Prepare the railgun at the <ItemLink id="ae2lt:overload_device_workbench" />:
+* **Ultimate Overload Core (Base Requirement)**: Required to operate the weapon and fire the **standard continuous beam** (hold Attack in mainhand).
+* **Overload Core Module (Advanced Requirement)**: Unlocks **charged shots** (hold Use) and enables **16 High Voltage : 1 Extreme High Voltage** substitution (spending existing EHV first).
 
-* Install an <ItemLink id="ae2lt:ultimate_overload_core" /> in the structural core slot; this is required for railgun operation
-* Install the <ItemLink id="ae2lt:railgun_module_core" /> to enable charged shots and HV compensation for charged shots and EHV beams
+## Firing Modes & Default Values
 
-The workbench binds the railgun to its ME network when the railgun is inserted. The bound network must stay loaded and online. Without an Energy Module, the railgun stores 1,000,000 FE.
+> Values below are base defaults; actual combat output depends on installed modules, server configuration, and target defenses. Base range is **64 blocks**.
 
-## Fire Modes
+### Continuous Beam (Hold Attack)
 
-### Beam Fire
+| Beam Mode | Default Per Pulse (Every 2 Ticks) | Lightning Cost | Requirement |
+|-----------|----------------------------------:|----------------|-------------|
+| **Standard Beam** | 20 base damage · 400 FE | 1 High Voltage every 8 pulses | Ultimate Overload Core installed |
+| **EHV Beam** | 200 base damage · 4,000 FE | 16 Extreme High Voltage per pulse | **Extreme High Voltage Beam Module** installed and toggled on in **Overload Device** (uses Overload Core substitution if EHV is low; halts if resources run out) |
 
-Hold the attack key while the railgun is in the main hand to fire a beam with a base range of 64 blocks.
+### Charged Shots (Hold Use, Release to Fire)
 
-Beam fire uses High Voltage Lightning only. By default, each 2-tick settle deals 20 damage, ignores 40% of armor reduction, consumes 400 FE, and consumes 1 High Voltage Lightning every 8 settles.
+Charging draws continuous FE while holding. Impacts include splash damage, recoil, thunderstorm bonuses, and electromagnetic stun (**wearing a full Celestweave armor set eliminates charged-shot recoil**):
 
-### Charged Shot
+| Charge Tier | Base Charge Time | Default Base Damage | Fire Cost |
+|-------------|-----------------:|--------------------:|-----------|
+| **EHV1** | 10 ticks | 100 | 8,000 FE + 32 EHV Lightning |
+| **EHV2** | 24 ticks | 300 | 40,000 FE + 96 EHV Lightning |
+| **EHV3** | 40 ticks | 600 | 200,000 FE + 256 EHV Lightning |
 
-Hold use to charge, then release to fire. Releasing before the first charge tier produces no shot. Charged shots have a base range of 64 blocks.
+## Energy Capacity & Modules
 
-| Tier | Base Charge Time | Default Damage | Firing Cost |
-|------|------------------|----------------|-------------|
-| EHV1 | 0.5 s | 100 | 8,000 FE + 32 EHV |
-| EHV2 | 1.2 s | 300 | 40,000 FE + 96 EHV |
-| EHV3 | 2.0 s | 600 | 200,000 FE + 256 EHV |
+Base capacity is **1,000,000 FE**, expanding to **100,000,000**, **500,000,000**, or **2,000,000,000 FE** with Energy Module T1, T2, or T3.
 
-Charging also drains FE from the railgun buffer each tick: 1,000 / 4,000 / 10,000 FE for EHV1 / EHV2 / EHV3 charge progress. Charged shots have 80% armor bypass, apply electromagnetic paralysis for 2 seconds, and gain 25% damage during thunderstorms when the shooter can see the sky.
+| Module | Max | Effect |
+|--------|----:|--------|
+| **Overload Core Module** | 1 | Unlocks charged shots and 16:1 EHV substitution |
+| **Extreme High Voltage Beam Module** | 1 | Enables EHV Beam toggle in the **Overload Device** menu |
+| **Overload Compute Module** | 2 | Enhances chaining and targeting behavior |
+| **Overload Acceleration Module** | 2 | Reduces charge duration |
+| **Overload Range Module** | 2 | Extends effective range beyond the 64-block base |
+| **Overload Execution / Multidimensional Execution Module** | Exclusive (1 of 2) | Select execution mode in **Overload Device**: **Overload Execution** adds **5% / 10% / 20%** max-HP bonus damage across EHV1/EHV2/EHV3 (subject to standard damage resolution and extra FE); **Multidimensional Execution** has no percentage tiers, upgrades execution behavior, and preserves original firing costs |
 
-Charged shots and EHV beams consume available EHV lightning first. With the core module installed, only the shortfall is compensated at **16 HV = 1 EHV**.
+## Configuration & Safety Toggles
 
-## Recoil
-
-Charged shots apply tier-based recoil; crouching halves it, while firing mid-air makes it stronger.
-
-Wearing the complete Celestweave set (<ItemLink id="ae2lt:celestweave_oculus" />, <ItemLink id="ae2lt:celestweave_core" />, <ItemLink id="ae2lt:celestweave_conduit" />, <ItemLink id="ae2lt:celestweave_stride" />) cancels charged-shot recoil entirely, including the view kick and camera shake feedback.
-
-## Modules
-
-| Module | Limit | Effect |
-|--------|-------|--------|
-| Energy Module T1 / T2 / T3 | 1 | Sets railgun FE capacity to 100,000,000 / 500,000,000 / 2,000,000,000 FE |
-| Overload Compute Module | 2 | Enables and improves chain arcs; at max charge, strengthens the EMP pulse |
-| Overload Acceleration Module | 2 | Each module adds +1 charge unit per tick, reducing charge time |
-| Overload Range Module | 2 | Multiplies continuous-beam and charged-shot range: one module gives 2x range and two give 4x |
-| EHV Beam Module | 1 | Enable in the Device Hub: every 2 ticks, consumes 16 EHV lightning and 4,000 FE for 200 base damage; disable to restore the ordinary HV beam |
-| Overload Execution Module | 1 | Percentage mode supports all three charged tiers; other modes trigger only on EHV3 charged hits; in an active execution mode it spends an additional 20,000,000 FE to record the target's health, and repeated hits can complete the execution |
-| Multidimensional Execution Module | 1 | Replaces Overload Execution: an eligible EHV3 hit ignores the health threshold and the module's additional FE / Lightning cost; its exact result follows the shared Execution Method setting |
-
-Without compute modules, chain arcs are disabled. With two acceleration modules, charge progress accumulates at three times the base rate.
-
-Overload Execution and Multidimensional Execution occupy the same execution slot and cannot be installed together. The Multidimensional module removes the execution surcharge; charging and firing the railgun still use the ordinary shot costs listed above.
-
-## Device Hub Settings
-
-Open the Overload Device Hub with the default key G while holding the railgun.
-
-* **Terrain Destruction** controls whether charged shots break terrain, ignoring claim protection. It is off by default and can still be disabled by server config
-* **PVP** allows the railgun to damage other players when enabled. When disabled, players are not targeted or damaged
-* **Sound** controls the railgun's local sound effects
-* **Chain Damage** enables chain jumps for both charged shots and the continuous beam; the ordinary beam can start a chain at its endpoint even without a direct entity hit
-* **Execution Method** is shared by both execution modules and cycles through Off, Percentage, Normal Death and Forced Death for Overload; Multidimensional skips Percentage. Off never enters the explicit death/removal chain: Overload Execution instead adds 600 armor-piercing electromagnetic damage, while Multidimensional Execution adds `Float.MAX_VALUE` armor-piercing electromagnetic damage. These ordinary damage calls preserve the target's own damage, death and loot mechanics. The Off fallback has no execution-module surcharge
-* **EHV Beam** appears after installing the module. It consumes available EHV lightning first; with the core module installed, each missing EHV costs 16 HV. Without a core or enough HV, firing stops without downgrading. EHV beams, endpoint glows and chain arcs are pink-white; ordinary HV beams are cyan-white. Compensation preserves EHV color and damage. Server config controls damage and costs; normal beam armor, storm and chain rules still apply
-* **Charged Splash** controls landing-point area damage for every charged tier; disabling it keeps direct hits and chains from directly hit targets
-* **Overload Execution range** always includes the direct target, while local-area execution is limited to half of the active charged-splash radius; chain propagation never carries execution
-* The hub also shows module counts, FE storage and bound network status
-
-## Combat Notes
-
-Charged shots deal splash damage at the impact point, with tier radii of 5.5 / 8 / 12 blocks; damage falls off toward the edge, and splash damage against players is halved. EHV3 also penetrates up to 5 targets and releases an EMP pulse with a 10-block radius around the first target.
-
-Compute modules increase chain jump count and fork count, and enlarge the pulse radius while raising pulse damage. Thunderstorms increase chain reach and fork count.
-
-## Percentage Damage
-
-Only Overload Execution supplies this mode. Charged tiers add **5% / 10% / 20% of maximum health** to the shot before ordinary armor, mitigation and damage events. It never writes health or forces removal. Each target receives the bonus at most once per shot and pays the usual **20,000,000 FE** Overload surcharge; insufficient FE leaves only the base attack. Entering or leaving Percentage clears remembered HP.
-
-Only the direct target and the existing local execution radius qualify; chain propagation does not carry the bonus. Neither HV nor EHV beams trigger percentage damage or execution, and the EHV module does not increase charged damage or percentages. EHV beam settles bypass ordinary hurt cooldown while preserving entity-specific immunity. The ordinary HV beam retains its original hurt cooldown behavior.
+Damage multipliers, PvP rules, terrain destruction, and chaining limits are governed jointly by **server configuration** and your local switches inside **Overload Device** (<KeyBind id="key.ae2lt.open_config" />). Beams, charged impacts, chaining, and execution each evaluate their own range and cost rules independently.

@@ -9,49 +9,21 @@ item_ids:
 
 # Lightning Assembly Chamber
 
-<Row>
-  <BlockImage id="ae2lt:lightning_assembly_chamber" scale="4" />
-</Row>
+<ItemImage id="ae2lt:lightning_assembly_chamber" scale="2" float="left" />
 
-The **Lightning Assembly Chamber** handles advanced recipes with larger input counts. Where the Lightning Simulation Room has 3 input slots, the Assembly Chamber has 9 — which makes it well-suited to complex assembly tasks that need many different materials at once.
+The **Lightning Assembly Chamber** handles complex multi-ingredient shapeless recipes across 9 input slots, crafting advanced machines, Overloaded network devices, and high-tier components.
 
-## Slots and Capacity
+## Specifications & Operation
 
-| Slot | Capacity | Notes |
-|------|----------|-------|
-| Input × 9 | 8,192 | Feed in the materials; slot order does not matter |
-| Matrix × 1 | 1 | Optional Lightning Collapse Matrix |
-| Output × 1 | 8,192 | Processed output; written by the machine only |
-| Speed Card Slots | — | Up to 4 AE2 Speed Cards |
+* **Inventory**: 9 input slots and 1 output slot, each holding up to **8,192** items, plus 1 matrix slot (limit 1).
+* **Energy Buffer**: **20,000,000 FE**.
+* **Upgrades**: Accepts up to 4 AE2 <ItemLink id="ae2:speed_card" />s to increase per-tick processing speed.
+* **Dedicated Recipe Set**: Runs its own assembly recipe type (separate from Simulation Room recipes), including automated crafting of the Lightning Simulation Room itself (check your recipe viewer for exact recipes).
+* **Matrix Substitution**: Installing 1 <ItemLink id="ae2lt:lightning_collapse_matrix" /> lets Extreme High Voltage recipes substitute High Voltage Lightning at a **4:1** ratio when EHV is insufficient.
+* **Automation**: Supports side export configuration, auto-export, and Memory Card configuration copying, sharing the same recipe locking and completion checks as the Simulation Room.
 
-## Operating Flow
+<OptionalSection modId="appflux">
+## Network FE Refill
 
-1. Put the ingredients into the 9 input slots
-2. The machine matches the current inputs against registered recipes
-3. Once a recipe is matched and the ME network has enough Lightning and FE, the machine locks in the recipe and starts processing
-4. FE is spent during processing, and the required Lightning is consumed when the operation completes
-5. The output goes to the output slot when processing finishes
-
-## Lightning Consumption
-
-Every recipe defines its required Lightning tier and amount. If the ME network cannot supply enough Lightning when the operation is ready to complete, the machine waits until supply recovers.
-
-## Compared to the Lightning Simulation Room
-
-| Feature | Simulation Room | Assembly Chamber |
-|---------|-----------------|------------------|
-| Input slots | 3 | 9 |
-| Max stack per slot | 8,192 | 8,192 |
-| Intended use | Simple conversion | Complex multi-material assembly |
-| Matrix substitution | Supported | Supported |
-| Speed Cards | Up to 4 | Up to 4 |
-
-## Matrix Substitution
-
-<ItemImage id="ae2lt:lightning_collapse_matrix" scale="2" float="left" />
-
-Like the Simulation Room, the Assembly Chamber supports **matrix substitution**. With a **Lightning Collapse Matrix** installed, some recipes that would normally require **Extreme High Voltage Lightning** can be fulfilled by consuming several times the amount of **High Voltage Lightning** instead.
-
-## Auto Export
-
-With Auto Export enabled, finished outputs are automatically pushed to adjacent containers on the allowed sides. The sides are configured in the "Configure Output Sides" screen of the GUI.
+With Applied Flux installed, the Assembly Chamber automatically refills its 20,000,000 FE buffer from FE stored in the connected ME network.
+</OptionalSection>

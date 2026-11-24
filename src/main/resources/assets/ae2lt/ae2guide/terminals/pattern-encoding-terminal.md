@@ -12,180 +12,68 @@ item_ids:
 
 # Tianshu Pattern Encoding Terminal
 
-The <ItemLink id="ae2lt:tianshu_pattern_encoding_terminal" /> provides everything the normal Pattern Encoding Terminal does, plus enhanced processing-pattern encoding, pattern upload, closed-loop pattern authoring, and inventory-maintenance configuration. Attach it to ME cable like any terminal. **Pattern encoding and uploading to providers require no Tianshu Supercomputer**.
+<ItemGrid>
+  <ItemIcon id="ae2lt:tianshu_pattern_encoding_terminal" />
+  <ItemIcon id="ae2lt:wireless_tianshu_pattern_encoding_terminal" />
+  <ItemIcon id="ae2lt:closed_loop_pattern" />
+</ItemGrid>
+
+Available in wired and wireless forms, the **Tianshu Pattern Encoding Terminal** handles multi-mode encoding, smart upload routing with aliases, closed-loop pattern authoring, and inventory maintenance management.
 
 <RecipeFor id="ae2lt:tianshu_pattern_encoding_terminal" />
 
-The wireless version provides the same encoding features and can also be used as a Wireless Universal Terminal module.
-
 <RecipeFor id="ae2lt:wireless_tianshu_pattern_encoding_terminal" />
 
-## Encoding Modes
+## Encoding Modes & Processing Tools
 
-The terminal offers crafting, processing, stonecutting, smithing, and **Closed-Loop Pattern** modes.
+Five permanent modes are available: **Crafting**, **Processing**, **Smithing**, **Stonecutting**, and **Closed-loop Pattern**.
 
-## Binding to a Tianshu
+* **Processing Controls**:
+  * Scale recipe quantities with `×2 / ÷2 / ×5 / ÷5` (hold `Shift` for `×4 / ÷4 / ×10 / ÷10`).
+  * **Middle-click** any slot to edit its count directly (`0` clears the slot).
+* **Overload Pattern Setup**: Open **Overload Pattern Setup** on a processing recipe to toggle individual inputs or outputs between **Strict** (full component match) and **ID Only** (ignore NBT). Re-verify setup if you change ingredients, counts, or mode.
 
-Only two features require a formed Tianshu Supercomputer: uploading closed-loop patterns into Closed-Loop Pattern Storage, and inventory maintenance. When a Tianshu exists on the network, the opened terminal locks onto the first available formed one; if none is available yet, it locks onto the first Tianshu that comes online.
+<OptionalSection modId="advanced_ae">
+* **Advanced Encoding (AdvancedAE)**: With AdvancedAE installed, assign per-input insertion faces on processing patterns—combinable with Overload Pattern Setup.
+</OptionalSection>
 
-The terminal never rebinds to a different Tianshu while it stays open. If the locked Tianshu goes offline or unforms, the related actions simply fail; close and reopen the terminal to pick a target again.
+<OptionalSection modId="useless_mod">
+* **Omniversal Patterns (Useless Mod)**: With Useless Mod installed, an **Omniversal patterns** mode is added. Fill from your recipe viewer or set inputs, outputs, and molds manually. Upload prioritizes formed multiblock ME Pattern Assemblies with matching molds and free slots before matching single-block alloy furnaces (multi-mold recipes route exclusively to multiblocks). If no valid match exists, the encoded pattern stays in the terminal.
+</OptionalSection>
 
-The Closed-Loop Pattern Storage installed in the bound Tianshu's cooling-compatible positions appears as an extra pattern inventory in the terminal's network-content list. The entry is shown only while the structure is formed and its port is online. Each Closed-Loop Pattern Storage provides **36** closed-loop pattern slots, and installed storages add up. Closed-loop patterns can be taken out of the list for inspection or editing; returning them to the storage requires the terminal's upload function.
+## Upload Routing, Aliases & Undo
 
-<a name="processing-patterns"></a>
+### Target Routing
 
-## Enhanced Processing Patterns
+| Pattern Type | Upload Target |
+|--------------|---------------|
+| Crafting, Stonecutting, Smithing | Prioritizes the [Tianshu Matter Warping Matrix](../matrix/matrix-index.md), then compatible allowlisted groups (AE2 Molecular Assemblers, ExtendedAE / ExtendedAE Plus assembly lines, NeoECOAE groups, AE2CS Meteorite Pattern Providers, etc.) |
+| Processing, Advanced, Overload | Choose from visible provider groups, or auto-upload when a single unique group matches |
+| Closed-Loop Patterns | Uploaded to the Closed-Loop Pattern Storage of the [Tianshu Supercomputer](../tianshu/tianshu-index.md) locked by this terminal session |
+| Omniversal Patterns (if enabled) | Routed by recipe, molds, and free slots to matching alloy furnaces or multiblocks |
 
-In processing mode the terminal adds:
+### Shortcuts & Safeguards
 
-* **Multiplier buttons:** Multiply or divide all input and output amounts by 2 or 5; hold Shift for 4 or 10 to rescale a recipe into whole batches.
-* **Advanced encoding** (requires AdvancedAE): Configure an insertion side for each input; once configured, encoding produces an advanced pattern.
-* **Overload encoding:** Choose a match mode for each input and output — “Strict” requires identical item components, “ID only” ignores component differences and matches by item alone. Once configured, encoding produces an overload pattern.
+* **Upload Trigger**: By default, clicking Encode encodes and uploads, while `Shift`-clicking encodes only (configurable to modifier-upload or manual-only). Duplicate upload blocking is enabled by default.
+* **Alt Recipe Transfer**: Holding `Alt` during JEI/EMI recipe transfer waits for transfer completion and triggers encode/upload automatically (staying in the viewer on direct upload, or opening group selection when needed; in Closed-Loop mode it searches loop solutions for the transferred target).
+* **Manage Upload Aliases**: `Shift + Right-Click` the encode button to open **Manage upload aliases**. Save workstation-to-group aliases and choose **Off**, **Saved aliases**, or **Any match**:
+  * Processing auto-upload only proceeds when merged candidates resolve to **one unique writable group**; multiple matches, no match, or full groups fall back to manual selection.
+  * Aliases are stored client-side and support **Export clipboard** / **Import clipboard** with conflict confirmation.
+* **Undo Last Upload**: With the encoded output slot empty, **Right-Click** the encode button to recall your own last successful upload from the current session (rejected if the pattern was moved, replaced, or modified; cleared when closing the terminal).
 
-Advanced and overload encoding can be combined. Settings are saved with the current recipe and can be reused for repeated encoding. Reconfigure after changing inputs, outputs, or quantities, switching modes, clearing the page, or resetting the encoding type.
+## Closed-Loop Patterns & Seed Refilling
 
-Middle-click a processing slot to edit its quantity and confirm. Setting it to 0 clears the slot.
+A **Closed-Loop Pattern** groups interconnected patterns into a net-positive loop declaring **1 net primary output** and up to **8 byproducts** across up to **27 member slots** (in lowest integer ratios; nested closed-loop patterns count toward the expanded member limit; net-zero compression/decompression loops are rejected):
 
-<a name="pattern-upload"></a>
+1. **Discover or Assemble**: Place a pattern for the desired primary output in the output slot (or transfer it from a recipe viewer), switch to **Closed-loop Pattern**, and trigger auto-discovery to cycle through valid network loop solutions, or add members manually.
+2. **Configure & Encode**: Adjust member order, per-cycle counts, primary vs. byproduct roles, job borrow multiplier, and seed storage multiplier; resolve any validation notices, then encode.
+3. **Upload & Refill Seeds**: Upload to a **Closed-Loop Pattern Storage** (36 slots each) on an online Tianshu Supercomputer, install compatible ME storage cells in a **Closed-Loop Seed Storage** (10 cell slots each), and click **Refill Seeds** to move required seed stock from the ME network (status messages distinguish missing network stock, rejected bay insertion, and ready state).
+4. **Session Locking**: Opening the terminal locks onto the first available Tianshu Supercomputer without rebinding mid-session; reopen the terminal if the target goes offline or changes (authoring drafts works without an online supercomputer).
 
-## Pattern Upload
+## Inventory Maintenance & Reserved Inventory
 
-With a pattern in the encoded-pattern slot, the **Upload** button sends it to its destination without manual carrying:
+With an online Tianshu Supercomputer (up to **2,048** rules), `Shift + Middle Click` a craftable item or open the **Inventory Maintenance** overview (use the maintainable filter view to inspect all rules, including zero-stock entries):
 
-* **Crafting patterns** automatically match only provider groups for Molecular Assemblers, Extended Molecular Assemblers, EAE/EAEP Assembler Matrices, ECO Crafting Subsystems, and Tianshu Matter Warping Matrices. Matter Warping Matrices have priority; the other groups use the first compatible free slot in stable order.
-* **Processing patterns** open the provider-selection screen: all visible Pattern Providers on the network are listed grouped by name, showing provider counts and free slots per group, with search by name, item, or tooltip.
-* **Closed-loop patterns** upload to the bound Tianshu's Closed-Loop Pattern Storage.
-
-The terminal settings configure an **upload trigger**: holding a chosen key (or no key) while encoding automatically enters the matching upload flow; it can also be set to manual upload only. The manual upload button always remains available.
-
-### Manage Upload Aliases
-
-**Shift + right-click the encode button** opens management in wired and wireless terminals. The upload picker and Tianshu settings also provide an entry.
-
-Search, add, edit or delete mappings by source. Adding or editing uses the upload provider list; fill the source manually or use + on a JEI/EMI recipe page. Left click or Shift + right click a provider to fill the draft alias, including full providers, or type an alias manually. Confirm saves the draft; Cancel discards it without uploading a pattern. Back or Esc asks before discarding a changed draft, and conflicting replacements still require confirmation.
-
-The top button cycles a client-wide policy, defaulting to **Off**:
-
-* **Off**: choose processing-pattern targets manually.
-* **Saved aliases**: use only an explicitly saved alias for the current recipe source.
-* **Any match**: prefer a saved alias, then the registry IDs of JEI's left-column machines or EMI workstations. When machine metadata exists, do not fall back to broader name guesses. Without machine metadata, retain the existing candidate rules.
-
-Automatic upload requires exactly one matching group that can accept the pattern. All machine candidates are evaluated together, including full groups when checking ambiguity. Missing, ambiguous or full targets keep the picker open. Normal and Alt recipe-viewer uploads share this policy. Existing crafting, closed-loop and omniversal routes retain their own routing.
-
-**Export clipboard** copies all saved aliases as JSON. **Import clipboard** validates the whole document before merging; conflicting replacements require confirmation. Other mappings and the automatic upload mode are preserved. Settings are local to each player and shared across their worlds and servers.
-
-The upload picker also supports saving the current filter or Shift + right-clicking a group to bind it. Aliases filter names or icon IDs, not physical machine addresses. Deleting one source leaves other sources using the same alias intact.
-
-### Undo the Last Upload
-
-**Right-click the encode button** to return your last successfully uploaded pattern in this menu session to the empty encoded-pattern slot. Only one receipt is retained; closing the menu clears it. Undo does not refund another blank pattern.
-
-The server isolates receipts per player menu and rejects disconnected targets, removed/replaced/changed patterns and changed closed-loop repositories. Even an identical replacement inserted by another player cannot satisfy an old receipt. Target lists also bind the original encoded pattern, preventing an old request from uploading a replacement from a shared wired terminal.
-
-### Direct Encoding and Upload from JEI or EMI
-
-Prepare a blank pattern in the Tianshu Pattern Encoding Terminal and use any non-closed-loop encoding mode. On a JEI or EMI recipe page, **hold `Alt` while transferring the recipe**. After the viewer confirms that the transfer succeeded, the terminal encodes the pattern and immediately attempts to upload it according to its type. A failed transfer starts neither encoding nor upload.
-
-> This `Alt` shortcut belongs to the recipe viewer and is independent of the terminal's configured **upload trigger**. The upload trigger does not need to be set to `Alt`.
-
-The direct-upload result depends on the pattern type:
-
-* **Crafting, stonecutting, and smithing patterns** follow their normal automatic routing. When no selection is needed, the current JEI or EMI recipe page remains open and the upload result appears in the action bar, making consecutive transfers easier.
-* **Processing, advanced, and overload patterns** follow the three-state policy above. The default opens the picker. When enabled, only one unambiguous writable target uploads in the background while preserving the recipe page.
-* **Closed-loop mode** does not use this direct-upload shortcut. A JEI/EMI transfer only marks the primary output and starts closed-loop discovery; finish configuring, encoding, and uploading the closed-loop pattern normally.
-
-<a name="closed-loop-patterns"></a>
-
-## Closed-Loop Patterns
-
-A closed-loop pattern bundles linked patterns into one recipe for automation that cycles ingredients while producing a net gain, such as Smithing Template duplication or the AdvancedAE Reaction Chamber Certus Quartz loop. Prepare the ordinary patterns that make up the loop first.
-
-A closed-loop pattern consists of:
-
-* **Member patterns** (up to 27): the ordinary patterns forming the loop, each annotated with copies executed per cycle. All copy counts must form a minimal integer ratio; 2:4 is invalid and must be written as 1:2.
-
-* **Primary and secondary outputs:** Mark exactly 1 primary output and up to 8 secondary outputs from the loop's net production. The primary output must have a positive net gain. For example, consuming 128 Certus Quartz Crystals and producing 256 is valid, as is producing 192 Certus Quartz Crystals, 16 Certus Quartz Dust, and 16 Charged Certus Quartz Crystals. Producing only 64 Certus Quartz Crystals, 48 Certus Quartz Dust, and 48 Charged Certus Quartz Crystals has a negative net gain and cannot be encoded. Reversible conversions such as `1 Iron Block → 9 Iron Ingots` paired with `9 Iron Ingots → 1 Iron Block` also have no net gain and are rejected.
-
-* **External inputs:** Materials each cycle draws from the network, computed automatically and shown read-only. Water supplied to the Reaction Chamber loop is one example.
-
-* **Seeds:** Items advanced to start the loop, computed automatically and shown read-only. In the example loop, at least 80 Certus Quartz Crystals—or 16 Charged Certus Quartz Crystals plus 16 Certus Quartz Dust—must be available before crafting can start.
-
-You must supply the materials required to start the loop.
-
-### Authoring Workflow
-
-1. Switch to Closed-Loop Pattern mode and place—or encode—the ordinary pattern for the loop's primary product in the terminal's **encoded-pattern output slot**.
-For a Certus Quartz closed loop, this could be a processing pattern such as `16 Charged Certus Quartz Crystals + 16 Certus Quartz Dust → 64 Charged Certus Quartz Crystals`, or a crafting pattern such as `1 Certus Quartz Block → 4 Certus Quartz Crystals`; any ordinary pattern whose output is Certus Quartz can be used as the starting point.
-2. Click **Fill**: the terminal searches the network for pattern combinations that close the loop around that product. When several candidates exist, clicking again cycles between them.
-3. Open the **Details** screen to review and adjust: add, remove, and reorder members, edit per-cycle copies, and mark primary and secondary outputs (click to toggle declaration, Shift-click to set primary).
-4. Adjust the two multipliers on the settings page:
-   * **Job seed waves:** How many seed sets one job borrows at startup—effectively the job's parallelism. Higher values increase per-job throughput and the startup advance.
-   * **Stored task sets:** How many jobs' worth of seeds the Tianshu keeps pre-stocked—effectively the number of jobs that can run in parallel.
-5. When the status reads ready to encode, encode to obtain a <ItemLink id="ae2lt:closed_loop_pattern" />, then upload it into the Closed-Loop Pattern Storage. Authoring and encoding a closed-loop pattern needs no Tianshu; however, the pattern must be stored in some Tianshu's Closed-Loop Pattern Storage before it can execute.
-
-### Preparing Seed Storage
-
-To run a closed-loop pattern, install at least one Closed-Loop Pattern Storage and one Closed-Loop Seed Storage in the Tianshu Supercomputer, then place an **ME Storage Cell** compatible with the seed type inside it. The Seed Storage's 10 slots hold storage cells only; seed items cannot be inserted directly.
-
-After installing the cell, select **Refill Seeds** on the closed-loop page. The terminal calculates the stored requirement for every enabled closed-loop pattern and transfers missing seeds from the current ME network into Seed Storage:
-
-* **ME network lacks seeds:** The current network does not contain enough of the listed item or fluid. Add it to the network and try again.
-* **Seed storage cannot accept seeds:** No suitable storage cell is installed, or its byte/type capacity is full, or a partition rejects the seed.
-* **Seed refill incomplete:** Both kinds of problem are present. Hover over the status text to see the reason and amount for each seed.
-* **Seeds ready:** The stored requirement is satisfied and the corresponding closed-loop crafting jobs can start.
-
-Members can also be filled entirely by hand when no automatic candidate exists. An encoded closed-loop pattern can be re-inserted to load it for editing; encoding again updates the original pattern. A closed-loop pattern may itself be nested as a member of another loop; it is flattened during encoding, and the flattened member total must still not exceed 27.
-
-The status line reports the specific reason a draft cannot encode — for example an unreadable member pattern, non-minimal copy ratios, a missing primary output, or a loop whose inputs and outputs do not balance.
-
-<a name="inventory-maintenance"></a>
-
-## Inventory Maintenance
-
-When a formed Tianshu Supercomputer is available on the network, the terminal can configure automatic restock rules per item: crafting starts when the stored amount drops **below** the lower bound, stops when it **reaches** the upper bound, and each job requests the configured batch size.
-
-### Configuration
-
-* **Shift + middle-click** a craftable item in the terminal to open its Inventory Maintenance editor, which works much like an ME Requester.
-* The **Inventory Maintenance** button opens an overview listing every configured entry, including materials whose current stock is zero. Click an entry to edit its rule.
-* The **Maintainable** view filters the terminal list to materials configured for inventory maintenance, making them easier to review together.
-
-* **Start below:** Starts automatic crafting when the material falls below the configured value.
-* **Stop at:** Stops starting new automatic crafting jobs when the material reaches the configured value. Jobs already submitted continue to completion.
-* **Per job:** Each job requests the full configured amount, even when less is needed to reach the upper bound. The resulting stock may exceed that bound.
-* **Enabled:** Enables or disables this material's maintenance rule.
-* **Check now:** Immediately checks this material's stock.
-* **Cancel job:** Cancels the currently running automatic crafting job.
-* **Crafting topology:** Configures material retention so that specified materials remain in stock.
-
-Click any entry under **Crafting topology** to set how much of that material maintenance jobs may not consume. Switch **Tianshu global** to **Rule additional** to configure an extra reserve for this rule. A rule-specific reserve only changes the effective protection when it is greater than the matching global reserve; see “Global Reserves” below.
-
-> Configured materials show a colored marker in Tianshu terminals: gray means the rule is disabled, green means the stock target is satisfied, orange means the rule is idle or crafting, and red indicates missing materials.
-
-<a name="global-reserves"></a>
-
-## Global Reserves
-
-A global reserve protects a quantity of an item from automatic maintenance jobs. Player-requested crafting jobs may still use this protected stock.
-Use the search box to find stored network content and click an item to configure it. Items may also be dragged from JEI or EMI onto the target in the lower-left corner.
-**Exact match** protects only the selected component variant, including properties such as durability and enchantments. **Ignore components** groups all variants with the same item ID.
-**Reserve** sets the protected quantity. Set it to `-1` to reserve all existing stock.
-
-If the overview becomes a recovery page, zero out or delete old entries one by one to reveal the remaining entries.
-
-<a name="settings"></a>
-
-## Terminal Settings
-
-**Terminal Settings → Tianshu Settings** opens this page. Wired and wireless terminals share these settings.
-
-### Encoding Terminal Settings
-
-* **Upload trigger:** By default, encoding uploads unless Shift is held. Other options upload while holding Shift, Ctrl, or Alt, or require manual upload.
-* **Intercept duplicate encoding:** Enabled by default. Encoding with upload is blocked if the network already contains the same pattern. With the default trigger, hold Shift to skip upload and duplicate interception.
-
-### JEI Wireless Ingredients
-
-Enable **JEI wireless ingredients** (off by default), then carry a powered, connected wireless Tianshu terminal in your inventory or Curios. When transferring a recipe to a workbench or machine with JEI transfer support, missing items are supplied from the network. Tianshu modules in a Wireless Universal Terminal work too.
-
-Keep inventory space free for ingredients. A normal click fills one recipe; Shift fills in bulk. Only items are supplied. If transfer fails or you close the screen, extracted items remain in your inventory.
+* **Hysteresis & Fixed Batch Size**: Restocking activates when stock is **strictly below** **Start below** and stops upon reaching **Stop at**. No duplicate job is placed while a rule's previous job is active. Every order submits the fixed batch count, which may overshoot **Stop at**, and running jobs are never canceled upon reaching the upper threshold.
+  * *Example*: With **Start below** `100`, **Stop at** `200`, and batch `128`, dropping to `90` orders `128`; with no other consumption, stock finishes at `218` and restocking stops.
+* **Reserved Inventory**: Set global reserves and per-rule reserves; both layers apply simultaneously (the stricter bound wins), supporting exact-component and component-ignoring matching. Setting `-1` protects all existing stock of that entry. Reserves apply **only to maintenance planning** and do not block manual crafting or other ME automation.

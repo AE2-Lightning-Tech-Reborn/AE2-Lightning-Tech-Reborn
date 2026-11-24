@@ -24,6 +24,7 @@ item_ids:
   - ae2lt:module_creative_flight
   - ae2lt:module_phase_flight
   - ae2lt:module_phase_lock
+  - ae2lt:phase_lock_projection
   - ae2lt:module_dash
   - ae2lt:module_dig_affinity
   - ae2lt:module_movement_assist
@@ -38,91 +39,59 @@ item_ids:
   <ItemIcon id="ae2lt:celestweave_stride" />
 </ItemGrid>
 
-**Celestweave** is a modular armor set. Each piece has its own FE buffer, network binding, core slot and module slots.
+**Celestweave** is a four-piece modular armor set consisting of **Celestweave Oculus** (Helmet), **Celestweave Core** (Chestplate), **Celestweave Conduit** (Leggings), and **Celestweave Stride** (Boots). Install an Ultimate Overload Core and modules into each piece at the [Overload Device Workbench](devices-index.md), then configure them in the **Overload Device** menu (<KeyBind id="key.ae2lt.open_config" />).
 
-| Piece | Armor Slot |
-|-------|------------|
-| Celestweave Oculus | Helmet |
-| Celestweave Core | Chestplate |
-| Celestweave Conduit | Leggings |
-| Celestweave Stride | Boots |
+## Energy Capacity
 
-## Assembly
+Each piece starts with a **10,000,000 FE** internal buffer and accepts 1 Energy Module:
 
-Use the <ItemLink id="ae2lt:overload_device_workbench" /> for each piece:
+| Energy Module | FE Capacity per Piece |
+|---------------|----------------------:|
+| None | 10,000,000 FE |
+| Energy Module T1 | 1,000,000,000 FE |
+| Energy Module T2 | 5,000,000,000 FE |
+| Energy Module T3 | 20,000,000,000 FE |
 
-1. Insert the armor piece; it binds to the workbench's ME network
-2. Install an <ItemLink id="ae2lt:ultimate_overload_core" /> in the core slot
-3. Install one optional Energy Module and any compatible armor modules
-4. Equip the armor and open the Overload Device Hub with the default key G to enable, disable or configure modules
+## Modules by Piece
 
-Each armor piece accepts any number of compatible modules, while per-module limits and mutual-exclusion groups still apply; only one Energy Module can be installed. Without an Energy Module, each piece stores 10,000,000 FE. T1 / T2 / T3 modules raise armor capacity to 1,000,000,000 / 5,000,000,000 / 20,000,000,000 FE.
+| Piece | Available Modules |
+|-------|-------------------|
+| **Celestweave Oculus** (Helmet) | **Night Vision Module**, **Water Breathing Module**, **Saturation Module** (periodically restores hunger and saturation) |
+| **Celestweave Core** (Chestplate) | **Reach Extension Module**, **Protection Group (choose 1)**: Matrix Shield / Phase Shield / Overload Protection / Multidimensional Protection, **Reflect Module** (reflects up to **30%** of incoming damage to eligible living attackers), **Purification Module**, **Phase Lock Module**, **Overload Core Module** (shared with Railgun; enables 16:1 HV substitution) |
+| **Celestweave Conduit** (Leggings) | **Flight Group (choose 1)**: Creative Flight Module / Phase Flight Module — double-tap Space mid-air to hover, hold Space while gliding to boost, Space/`Shift` to ascend/descend while hovering; Phase Flight adds **Phase Mode** (`Off`, `Creative Flight Only`, `Creative + Elytra`) |
+| **Celestweave Stride** (Boots) | **Dash Module** (hotkey: <KeyBind id="key.ae2lt.dash" />, default `V`), **Dig Affinity Module** (underwater & airborne mining speed), **Movement Assist Module** (walk/sprint/sneak speed & step assist) |
 
-## Runtime
+<OptionalSection modId="mekanism">
+### Mekanism Protection Modules (Chestplate)
 
-A module only works while its armor piece is equipped, has a core installed and the module is enabled. Active modules consume FE from worn Celestweave pieces and usually consume Lightning from the bound ME network.
+With Mekanism installed, two dedicated chestplate modules are supported:
 
-If FE or required Lightning is missing, the affected effects cannot be maintained.
+* **Radiation Assimilation Module**: Mitigates Mekanism radiation.
+* **Laser Protection Module**: Protects against Mekanism laser damage.
+</OptionalSection>
 
-## Helmet Modules
+## Shield Costs, Undying & Substitution
 
-| Module | Effect |
-|--------|--------|
-| Night Vision | Maintains Night Vision while active |
-| Water Breathing | Maintains Water Breathing while active |
-| Saturation | Restores food and saturation toward full, spending High Voltage Lightning when it restores |
+* **Phase Shield**: Covers up to **1,024 damage** per hit at **20,000 FE + 2 Extreme High Voltage Lightning** per point.
+* **Overload Protection**: Shield absorption and death prevention share a fixed **20-tick** billing window:
+  * Standard shielding only pays the incremental difference up to the window's highest hit, capped at **2 GFE** and **1,024 EHV** per window.
+  * Death prevention scales with triggers within the window, up to **20 GFE** and **16,384 EHV**.
+* **Multidimensional Protection**: Requires no shield or death-prevention billing cost.
+* **Overload Core Substitution**: Installing an **Overload Core Module** in the chestplate draws existing EHV first, then covers any missing EHV at **16 High Voltage : 1 Extreme High Voltage**.
 
-## Chestplate Modules
+## Phase Lock Module
 
-| Module | Effect |
-|--------|--------|
-| Reach Extension | Adds block / entity interaction range; configurable as 1x, 2x or 4x |
-| Matrix Shield | Cancels environmental damage and extinguishes fire, reduces ordinary damage by about 80%, and reduces hard damage by about 50% |
-| Phase Shield | Absorbs up to 1024 damage per hit at 20,000 FE and 2 EHV per point. Covered hits are cancelled; excess damage passes through. Does not counter mechanisms or extinguish fire |
-| Reflect | Reflects up to 30% of attacker damage, spending FE and High Voltage Lightning |
-| Overload Protection | Upgrades Phase Shield with unlimited shielding and last-stand protection, sharing a 20 GFE and 16,384 EHV cost cap per 20 ticks |
-| Multidimensional Protection | Unlimited shielding and last-stand protection; neither path consumes FE or Lightning |
-| Purification | Removes and blocks configured status effects; by default, harmful effects only |
-| Radiation Assimilation | Prevents new exposure and radiation damage; while ambient radiation is present, restores 1-5 hearts per second depending on radiation severity |
-| Laser Protection | Absorbs Mekanism lasers completely and converts the actually absorbed Joules to FE using Mekanism's configured conversion ratio, filling the chestplate and then the rest of the equipped set |
-| Phase Lock | Provides four independently toggled features: Armor Lock, Flight Lock, Block External Forces and Block External Teleports; see below |
-| Overload Core Module | Unlocks Lightning compensation for the armor set. Existing Extreme High Voltage Lightning is consumed first, then any shortfall is paid at 16 High Voltage Lightning per Extreme High Voltage Lightning |
+Installed on the chestplate, **Phase Lock** exposes four independent controls in the **Overload Device** menu:
 
-Matrix Shield, Phase Shield, Overload Protection and Multidimensional Protection share one exclusive installation group. Overload Protection is crafted from Phase Shield; its Pigmee conversion produces Multidimensional Protection.
+* **Armor Lock**: Stores your true armor in a protected private slot while displaying **Phase-Locked Projections** in the armor slots. Tampered projections are rebuilt at resource cost; if resources run out, the lock disengages and restores the real armor.
+* **Flight Lock**: Preserves permitted flight states against external interruption.
+* **Block External Forces**: Resists external pulls and forced displacement.
+* **Block External Teleports**: Blocks external forced teleports by source.
 
-Legacy Undying modules convert to Overload Protection, preserving toggles, options and last-stand combo state. If a legacy chestplate also contains Phase or Matrix Shield, the upgraded protection absorbs those installed lower tiers. Loose shield items in inventories are unaffected.
+## Player-Owned Entities
 
-### Phase Lock
+Living entities directly owned by a player can wear Celestweave armor and run supported modules:
 
-The Phase Lock Module uses the chestplate as its controller and exposes four independently toggled features in the Device Hub:
-
-* **Armor Lock:** Moves the currently worn Celestweave set into four player-bound private phase slots; each armor slot displays a Phase-Locked Projection to show that your corresponding armor is secured in private phase storage. The real armor keeps running inside the private slots, and newly worn Celestweave pieces join the lock automatically. Projections carry no enchantment glint and cannot be extracted or traded; replacing or removing one projection costs 1,000,000 FE and 16 Extreme High Voltage Lightning to rebuild it in place, and a failed payment releases the lock and re-equips the entire real set.
-`Think of this as soulbinding.`
-* **Flight Lock:** Freezes the current flight state, keeps flight active after landing, and rejects external state changes. It recognizes active Creative/Phase Flight modules, game-mode flight, and NeoForge's `CREATIVE_FLIGHT` attribute, but never grants flight by itself.
-* **Block External Forces:** Blocks velocity changes from water, fans, knockback and similar external systems, while player input and armor-driven movement still work.
-`For example: ignores pushing and pulling from Create's Encased Fan.`
-* **Block External Teleports:** Blocks external coordinate rewrites, teleports and dimension changes, while normal player movement is unaffected.
-`For example: ignores forced teleportation by Draconic Evolution's Chaos Guardian.`
-
-## Leggings Modules
-
-| Module | Effect |
-|--------|--------|
-| Creative Flight | Provides hovering and wing gliding; speed and inertia are configurable |
-| Phase Flight | Provides hovering and phase-wing gliding; Phase Mode offers Off, Creative Flight Only, or Creative + Elytra |
-
-Creative Flight and Phase Flight share the same install group, so only one can be installed on the leggings. Phase Flight is disabled by default after installation and must be enabled in the Device Hub.
-
-Both flight modules share vanilla-style controls: tap Jump in midair to deploy the wings, or double-tap Jump to toggle hovering. Hold Jump while gliding to thrust along the look direction. While hovering, Jump ascends and Sneak descends; holding both cancels vertical input and exposes a crouching state to other mods. Crouching while hovering uses ground sneaking speed (including sneaking attributes and Movement Assist sneak multipliers), temporarily disables inertia, and stops immediately when directional input is released. Leaving crouch restores the configured flight speed and inertia. Only Phase Flight exposes Phase Mode: **Off** disables phase traversal without disabling flight, **Creative Flight Only** phases hovering but keeps normal collision while gliding, and **Creative + Elytra** phases both hovering and gliding. Flight Lock is controlled centrally by the chestplate's Phase Lock Module.
-
-## Boots Modules
-
-| Module | Effect |
-|--------|--------|
-| Dash | Press the Dash key, default V, to dash forward; 40 tick cooldown |
-| Dig Affinity | Compensates underwater and airborne mining penalties |
-| Movement Assist | Separately tunes walking, sprinting and sneaking speed (0.5x-4x), plus automatic step height (0.6-3 blocks) |
-
-## Cost Notes
-
-Most active modules consume 1 High Voltage Lightning per tick in addition to their FE drain. Creative Flight and Phase Flight use more High Voltage Lightning while moving; active Phase Mode traversal uses Extreme High Voltage Lightning instead. Matrix Shield and Purification costs increase on repeated triggers. Phase and Overload shields pay only increases to the highest hit in a fixed 20-tick window. Phase costs at most 20,480,000 FE and 2,048 EHV per window. Overload shielding still costs 20,000 FE and 2 EHV per damage, paying only increases to the highest hit within a fixed 20-tick window. Damage fees always stop at 2 GFE and 1,024 EHV and never advance the death combo. Only deaths raise the tier: death n in the window costs up to min(2n GFE, 20 GFE) and min(1024n EHV, 16,384 EHV), charged at that tier's cap. Shielding and last stand share paid credit and only pay differences: a fully paid damage cap covers the first death for free, while the second death tops up to 4 GFE and 2,048 EHV. Higher death tiers never raise the damage cap. Repeated callbacks for one attack and same-tick reentry through forced-death hooks do not charge twice. FE reaches its cap at death tier 10 and EHV at tier 16; protection continues without further trigger costs after both caps are paid. Triggers do not extend the window; paid credit and the death combo reset after 20 ticks. Installing an Overload Core Module in the chestplate allows the whole set to compensate missing Extreme High Voltage Lightning at 16 High Voltage Lightning per Extreme High Voltage Lightning.
+* The server ticks armor power, Lightning billing, and supported passive/defensive modules directly on the entity—even while the owner is offline.
+* Look directly at a worn owned entity within reach and press **Open Overload Device Config** (<KeyBind id="key.ae2lt.open_config" />) to configure its equipment.
+* Only entity-compatible options are shown; player-input features remain exclusive to player wearers.

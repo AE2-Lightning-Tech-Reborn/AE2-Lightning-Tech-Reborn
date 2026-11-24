@@ -8,23 +8,14 @@ navigation:
 
 # Tianshu Supercomputer
 
-The **Tianshu Supercomputer** is a large multiblock crafting CPU for ME networks. It combines all crafting storage into a shared pool and, while capacity remains available, can accept multiple crafting jobs at the same time. It is intended for automation networks with both high job counts and high pattern-dispatch throughput.
-
-The supercomputer calculates plans, retains job state, and schedules crafting steps. Patterns still come from ME Pattern Providers or equivalent devices, while the ME network and processing machines continue to supply materials and produce results.
+The **Tianshu Supercomputer** is a high-performance multiblock crafting CPU for ME networks, combining a shared crafting storage pool, concurrent multi-job dispatching, closed-loop automation, and an inventory maintenance engine.
 
 <SubPages />
 
-## Basic Workflow
+## Key Features
 
-1. [Build the 7×7×7 structure](construction.md), install one Tianshu Main Core and 26 Peripheral Units in the core chamber, and replace shell cooling positions with closed-loop storage as needed
-2. Connect the Tianshu Supercomputer Port to a powered ME network
-3. Use the controller to verify structure status, crafting storage, successful dispatches, and copy budget, then configure [Fast Planning](operation.md#fast-planning) if required
-4. Start a crafting job from an ME terminal; allow automatic CPU selection or select the Tianshu Supercomputer in the confirmation screen
-5. Use the [Tianshu Pattern Encoding Terminal](../terminals/pattern-encoding-terminal.md) for enhanced pattern encoding, pattern upload, closed-loop patterns, and inventory maintenance
-
-## Operating Requirements
-
-* The structure must be fully formed: one Tianshu Main Core at the core-chamber center, the remaining 26 cells filled with a Peripheral Unit combination allowed by that Main Core, and all 17 non-port cooling-compatible positions filled with Tianshu Supercomputer Cooling Units or closed-loop storage; see [Structure and Auto-build](construction.md) and [Main Cores, Computing Units, and Performance](computing-units.md) for the full rules
-* Exactly one Tianshu Supercomputer Port is required, connected to a powered ME network; the formed multiblock consumes **1 channel**. Port idle power depends on the Main Core: Baseline **256 AE/t**, Quantum **8,192 AE/t**, Overload **262,144 AE/t**, and Multidimensional **8 AE/t**
-
-The structure requires neither external FE nor Lightning.
+* **Fixed Footprint**: 7×7×7 multiblock connected via a single ME port using **1 channel**.
+* **Shared Crafting Pool**: Concurrent crafting jobs share total crafting storage and per-tick successful dispatch budget while each job receives its own copy budget.
+* **Configurable Core Chamber**: A 3×3×3 core bay (27 blocks) holding 1 Main Core and 26 units. You can start early with a crafting-table **Baseline Main Core** surrounded by Blank Units.
+* **Closed-Loop & Inventory Maintenance**: The 17 cooling-compatible shell positions freely accept Cooling Units, **Closed-Loop Pattern Storages**, and **Closed-Loop Seed Storages**. Every valid Main Core supports closed-loop planning and up to **2,048** inventory maintenance rules (configured via the [Tianshu Pattern Encoding Terminal](../terminals/pattern-encoding-terminal.md)).
+* **Algorithm Selection**: Use the **CPU Algorithm Selection** button in the Controller UI to inspect or switch planning algorithms and priorities (defaults to the Thunderbolt V2 planning engine).

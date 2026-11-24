@@ -9,65 +9,46 @@ item_ids:
 
 # Overload Processing Factory
 
-<Row>
-  <BlockImage id="ae2lt:overload_processing_factory" scale="4" />
-</Row>
+<ItemImage id="ae2lt:overload_processing_factory" scale="2" float="left" />
 
-The **Overload Processing Factory** is the largest and highest-throughput processing device in this mod. It supports mixed item and fluid I/O, and unlocks parallel processing via the Lightning Collapse Matrix — making it the backbone of any large-scale industrial Lightning production line.
+The **Overload Processing Factory** is the primary bulk processing machine in AE2 Lightning Tech, supporting combined item and fluid I/O alongside multi-matrix parallel scaling.
 
-## Slots and Capacity
+## Slots & Buffers
 
-| Slot / Component | Capacity | Notes |
-|------------------|----------|-------|
-| Item Input × 9 | 16,384 | Feed in the items |
-| Matrix × 1 | 32 | Install Lightning Collapse Matrices to unlock parallelism |
-| Item Output × 1 | 16,384 | Processed output; written by the machine only |
-| Fluid Input | 1,024,000 mB | Feed in the required fluid through pipes |
-| Fluid Output | 1,024,000 mB | Holds fluid output |
-| FE Buffer | 640,000,000 FE (default) | Built-in energy buffer |
-| Speed Card Slots | — | Up to 4 AE2 Speed Cards |
+* **Item Slots**: 9 item inputs and 1 item output, each holding up to **16,384** items.
+* **Fluid Tanks**: **1,024,000 mB** input tank and **1,024,000 mB** output tank. A recipe may define up to one item output and one fluid output simultaneously.
+* **Matrix Slot**: Holds up to **32** <ItemLink id="ae2lt:lightning_collapse_matrix" /> items. Sneak-right-click the factory with matrices to quick-insert up to the cap.
+* **Energy Buffer**: **640,000,000 FE** by default.
 
-## Operating Flow
+## Acceleration Cards & Processing Rate
 
-1. Feed in the item and fluid inputs
-2. The machine matches the current inputs against registered recipes
-3. Once a recipe is matched and the required Lightning and FE are available, processing starts
-4. FE is spent during processing; item inputs, fluid inputs, and Lightning are consumed when the operation completes
-5. Item and fluid outputs go to their respective output slots
+The factory accepts up to 4 AE2 <ItemLink id="ae2:speed_card" />s, scaling its default per-tick FE throughput:
 
-## Parallel Processing
+| Acceleration Cards | Default Max FE/t |
+|-------------------:|-----------------:|
+| 0 | 400,000 FE/t |
+| 1 | 2,000,000 FE/t |
+| 2 | 8,000,000 FE/t |
+| 3 | 32,000,000 FE/t |
+| 4 | 128,000,000 FE/t |
 
-<ItemImage id="ae2lt:lightning_collapse_matrix" scale="2" float="left" />
+## Parallelism & Energy Formula
 
-The factory's parallelism is determined by the number of **Lightning Collapse Matrices** installed. The matrix slot holds up to 32 matrices, with each one providing a configurable amount of parallelism (default 8 per matrix, max 32 × 8 = 256):
+* **Parallel Limit**: With no matrix installed, the factory processes **1 batch** per cycle. Each installed matrix grants **8 parallel operations** by default, up to **256** at 32 matrices.
+* **Effective Batch Size**: The locked batch size is bounded by all five constraints simultaneously: matrix parallel cap, available item and fluid inputs, free item output space, free output fluid tank space, and available ME Lightning stock. Keeping outputs drained is essential for sustaining full parallelism.
+* **Lightning & Substitution**: Lightning cost scales linearly with batch count. With at least 1 Lightning Collapse Matrix installed, any Extreme High Voltage deficit after using available EHV is covered by High Voltage Lightning at a **4:1** ratio.
+* **Parallel FE Cost**: Let single-batch FE be `E`, locked parallel count be `p`, and max parallel cap be `M`:
+  * When `M ≤ 1`, FE scales linearly (`E × p`).
+  * When `M > 1`, total FE is `ceil(E × p × (p + 2M − 3) / (2M − 2))`.
 
-Hold Lightning Collapse Matrices and **sneak-use** the Overload Processing Factory to insert them directly into its matrix slot. The factory inserts as many as possible, up to 32, and leaves any remainder in your hand.
+<OptionalSection modId="appflux">
+## Network FE Refill
 
-* With no matrices installed, the factory cannot parallelize
-* Installing more matrices linearly raises the parallel ceiling
-* Effective parallelism is also constrained by available input materials and each recipe's per-operation cost
-* Higher parallelism means more output per cycle and higher total FE cost. The total FE cost uses the factory's parallel scaling formula, not a simple linear multiplier
+With Applied Flux installed, the factory automatically draws FE from the connected ME network to refill its 640,000,000 FE internal buffer.
+</OptionalSection>
 
-## Speed Cards and Energy Consumption
+<OptionalSection modId="advanced_ae">
+## AdvancedAE Reaction Chamber Compatibility
 
-The Overload Processing Factory accepts up to 4 Speed Cards. Each card significantly raises the FE cap per tick:
-
-| Speed Cards | FE cap per tick (default) |
-|-------------|---------------------------|
-| 0 | 400,000 FE |
-| 1 | 2,000,000 FE |
-| 2 | 8,000,000 FE |
-| 3 | 32,000,000 FE |
-| 4 | 128,000,000 FE |
-
-## Fluid I/O
-
-Fluid input and output can use any fluid pipe system. The input slot strictly validates the fluid type against the recipe.
-
-## Auto Export
-
-With Auto Export enabled, item outputs are automatically pushed to adjacent containers on the allowed sides. The sides are configured in the "Configure Output Sides" screen of the GUI.
-
-## Power Supply
-
-The Overload Processing Factory is powered by **external FE** on its sides — it does not draw AE from the ME network directly. Use any FE pipe or cable to connect power to one of its sides.
+With AdvancedAE installed, the Overload Processing Factory can run compatible Reaction Chamber recipes (single item or single fluid output) using their original ingredients, fluids, outputs, and base FE while applying the factory's own parallelism, speed cards, and buffer limits. Compatible recipes appear directly in the factory's recipe viewer tab.
+</OptionalSection>

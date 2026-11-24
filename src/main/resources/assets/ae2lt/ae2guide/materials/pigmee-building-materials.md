@@ -75,37 +75,30 @@ item_ids:
 
 # Pigmee Building Materials
 
-<Row>
-  <BlockImage id="ae2lt:white_pigmee_building_panel" scale="4" />
-  <BlockImage id="ae2lt:white_pigmee_framed_building_panel" scale="4" />
-</Row>
-
-**Pigmee Building Materials** are a dyed building set made of basic blocks, colored panels and slabs, with the same material and tool requirements as vanilla stone blocks.
-
-## Basic blocks
-
-Surround one **Rainbow Pigmee** with 8 cobblestone to craft 8 Pigmee Building Blocks; the Rainbow Pigmee stays in the crafting grid.
-
-## Colored panels and slabs
-
-A basic block stonecuts 1:1 into all 32 colored panels (16 colors × plain/framed) without any dye, and plain panels, framed panels and slabs also recut 1:1 into each other.
-
-| Recipe | Result |
-| --- | --- |
-| Stonecut: basic block → panel | 1 |
-| Stonecut: basic block → slab | 2 |
-| Crafting: 3 panels in a row | 6 slabs |
-| Stonecut: any panel or slab → another style | 1 |
-| Crafting: any 2 slabs | 1 basic block |
-| Crafting: any 1 panel | 1 basic block |
-
-Plain and framed panels of the same color connect their patterns automatically. Every style is listed in JEI or EMI.
-
 <ItemGrid>
   <ItemIcon id="ae2lt:pigmee_building_block" />
+  <ItemIcon id="ae2lt:pigmee_building_slab" />
   <ItemIcon id="ae2lt:white_pigmee_building_panel" />
   <ItemIcon id="ae2lt:white_pigmee_framed_building_panel" />
-  <ItemIcon id="ae2lt:pigmee_building_slab" />
   <ItemIcon id="ae2lt:white_pigmee_building_slab" />
   <ItemIcon id="ae2lt:white_pigmee_framed_building_slab" />
 </ItemGrid>
+
+**Pigmee Building Materials** provide a clean architectural block set produced from the [Rainbow Pigmee Fumo](rainbow-pigmee.md), covering base blocks and slabs plus 16-color Plain and Framed panels and slabs.
+
+## Crafting & Stonecutting
+
+1. **Craft Pigmee Building Blocks**: Craft **Pigmee Building Blocks** on a crafting table using the Rainbow Pigmee Fumo (which stays in the crafting grid).
+
+<RecipeFor id="ae2lt:pigmee_building_block" />
+2. **Stonecut Variants**: In a Stonecutter (or the Tianshu Crafting Terminal's Stonecutting page), 1 **Pigmee Building Block** cuts into:
+   * 1 **Pigmee Plain Panel** (16 colors) or 1 **Pigmee Framed Panel** (16 colors) — 32 full panels in total.
+   * 2 base **Pigmee Building Slabs**, or 2 colored **Pigmee Plain Slabs** (16 colors) / **Pigmee Framed Slabs** (16 colors) — 32 colored slabs in total.
+3. **Slabs & Conversion**:
+   * 3 matching panels (or base blocks) craft into 6 corresponding slabs on a crafting table.
+   * Colored panels and slabs can be freely recut between styles, crafted back into 1 base **Pigmee Building Block** (from 1 panel or 2 slabs), or recolored with the Rainbow Pigmee Fumo.
+
+## Visual Styles
+
+* **Plain Panel / Plain Slab**: Smooth solid surfaces suited for floors, walls, and clean machine rooms.
+* **Framed Panel / Framed Slab**: Adds clean structural edge framing that forms an aligned panel grid when tiled.

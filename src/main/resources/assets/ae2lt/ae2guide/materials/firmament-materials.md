@@ -18,71 +18,47 @@ item_ids:
 
 # Firmament Materials
 
-<ItemImage id="ae2lt:firmament_alloy_ingot" scale="2" float="left" />
-
-Firmament materials are AE2 Lightning Tech's End-tier material line. Everything starts from Firmament Dust, which can only be obtained in the End, and is refined step by step — through the Firmament Conversion Core and the Overload Processing Factory — into the core components of the Celestweave armor set and the Electromagnetic Railgun.
-
 <ItemGrid>
   <ItemIcon id="ae2lt:firmament_dust" />
   <ItemIcon id="ae2lt:firmament_essence" />
   <ItemIcon id="ae2lt:firmament_mixture" />
   <ItemIcon id="ae2lt:firmament_alloy_ingot" />
   <ItemIcon id="ae2lt:firmament_superconducting_wire" />
+  <ItemIcon id="ae2lt:inactive_firmament_spirit_core" />
 </ItemGrid>
 
-## Firmament Dust
+**Firmament Materials** form the End-tier refining chain used to craft [Celestweave](../celestweave.md) armor and the [Electromagnetic Railgun](../electromagnetic-railgun.md).
 
-Firmament Dust is the root of the entire line and **can only be generated in the End**.
+## Step 1: Harvesting Firmament Dust in the End
 
-Place an <ItemLink id="ae2:annihilation_plane" /> facing **upward** on the **topmost buildable layer** of the End, and connect it to a powered ME network. Once the conditions are met, the plane generates Firmament Dust on its own — without breaking any block — inserting roughly one portion into network storage every 10 seconds.
+1. In **the End** (`minecraft:the_end`), lay ME cables at the top buildable layer (so the host block satisfies `Y + 1 ≥ world max build height`).
+2. Attach <ItemLink id="ae2:annihilation_plane" />s facing **upward** on top of the cables, connected to an active ME network with free storage.
+3. Each valid plane tracks its own timer and attempts to insert 1 **Firmament Dust** into the ME network every **200 ticks (10 seconds)**, subject to power and storage availability.
 
-Conditions:
+> **Batch Placement**: Sneak-right-clicking the top of a cable with an ME Annihilation Plane searches connected cables on the same Y level up to 8 blocks horizontally and places up to 64 planes at once, skipping occupied faces and consuming only the items placed. Each plane still requires its own channel and power.
 
-* The dimension must be the End
-* The Annihilation Plane must face up
-* The plane must sit on the topmost buildable layer (y 255 in a default End; if the world height limit was changed, the actual limit applies)
-* The plane must belong to a powered, active network
+## Step 2: Firmament Starship & Conversion Core
 
-> Each qualifying Annihilation Plane generates independently, so several can be run in parallel to scale up output.
+The **Firmament Conversion Core** generates inside **Firmament Starship** structures in the End and operates **only within that structure's bounds**:
 
-### Bulk Plane Placement
+* **Interaction & Automation**: Right-click with ingredients to insert; right-click with an empty hand to extract outputs first. Item pipes and automation can insert and extract from any side. The core consumes **no AE, FE, or Lightning**.
+* **Standard vs. Upgraded**:
+  * **Standard**: Input and output slots hold 64 items each; converts **1 batch** per cycle.
+  * **Upgraded**: Sneak-right-click the core with a <ItemLink id="ae2lt:lightning_collapse_matrix" /> to consume 1 matrix and upgrade it in place (preserving inventory and progress). Input capacity increases to **256** (output remains 64) and batch size scales up to **16** per cycle, bounded by available inputs and output space.
 
-Build your cables on the topmost layer of the world, hold a stack of Annihilation Planes, and **sneak-right-click the top of a cable** to install upward-facing planes on nearby adjacent cables at the same height. Each use installs up to 64 planes within 8 horizontal blocks of the clicked position. Existing parts are preserved. Each installation consumes one plane from your hand; placement stops when the stack runs out.
+## Refining Progression
 
-Bulk placement only installs planes. It preserves the original generation conditions and rates of Firmament Dust and Sky Stone Dust, along with plane power use and channel requirements. Cables with a plane already installed can also serve as a starting point.
+Firmament intermediates alternate between the **Firmament Conversion Core** and the [Overload Processing Factory](../machines/overload-processing-factory.md) (check your recipe viewer for exact item counts, fluids, and energy costs in your pack):
 
-## Firmament Conversion Core
+| Output | Machine | Progression Role |
+|--------|---------|------------------|
+| **Firmament Essence** | Firmament Conversion Core | Converted directly from Firmament Dust |
+| **Firmament Mixture** | Overload Processing Factory | Processed from Firmament Dust, supporting powders, Lava, FE, and High Voltage Lightning |
+| **Firmament Alloy Ingot** | Firmament Conversion Core | Refined from Overload Alloy, Firmament Mixture, and Netherite Scrap |
+| **Firmament Superconducting Wire** | Overload Processing Factory | Processed from Overload Crystal Dust, Firmament Essence, supporting materials, FE, and High Voltage Lightning |
+| **All Four Firmament Spirit Cores** | Firmament Conversion Core | Activates an Inactive Firmament Spirit Core into all four piece cores |
 
-Most refining steps rely on the **Firmament Conversion Core**. This block cannot be crafted and exists only inside the **Firmament Starship**, a structure that floats above the outer End islands — travel beyond the central island to find one. The core is indestructible, cannot be mined or moved, and only operates inside the starship structure, so use it right where it stands.
-
-The core consumes neither energy nor lightning, and each job finishes after a short wait: right-click it with a material in hand to insert, then right-click with an **empty hand** to collect the result. It accepts up to three inputs at once and produces the outputs defined by each recipe. Hoppers and pipes can insert materials and extract products through any side, so an automated production line can be built right on the starship.
-
-The ordinary core processes **one recipe copy per cycle**, with a capacity of 64 items in each input and output slot.
-
-**Sneak-right-click** the core while holding **one Lightning Collapse Matrix** to consume the matrix and upgrade it in place to an **Advanced Firmament Conversion Core**. The advanced core holds **256 items per input slot** and **64 per output slot**, and completes up to **16 copies of the same recipe per cycle**, limited by available materials and output room. Upgrading preserves inventory and processing progress. A matrix mark appears on the top face.
-
-Every copy consumes its full ingredients and produces the original outputs. Essence and alloy ingots take about 2 seconds per cycle, module bases 5 seconds, and spirit core activation 10 seconds. The advanced core still requires a Firmament Starship. Keep inputs stocked and extract outputs to reduce the wait for bulk processing.
-
-## Refined Materials
-
-Firmament Dust is processed along two production lines:
-
-| Material | Made at | Primarily used for |
-|------|---------|---------|
-| Firmament Essence | Firmament Conversion Core | Firmament Superconducting Wire and higher recipes |
-| Firmament Mixture | [Overload Processing Factory](../machines/overload-processing-factory.md) | refining into Firmament Alloy Ingot |
-| Firmament Alloy Ingot | Firmament Conversion Core | main material of Celestweave and the Electromagnetic Railgun |
-| Firmament Superconducting Wire | [Overload Processing Factory](../machines/overload-processing-factory.md) | energy conduit of Celestweave |
-
-Besides firmament materials, these recipes also call for auxiliary ingredients such as Overload Alloy, Netherite Scrap and Phantom Membranes. Firmament Alloy Ingot is the mod's highest-tier structural material, while Firmament Superconducting Wire serves as the energy-conducting component of the Celestweave set.
-
-## Firmament Spirit Cores
-
-The spirit cores are the heart of the Celestweave armor set.
-
-A naturally generated Firmament Conversion Core has a **50%** chance to retain an <ItemLink id="ae2lt:inactive_firmament_spirit_core" /> in its output slots; use the core with an empty hand to retrieve it. Inactive cores also have a **15%** chance to appear in End City treasure chests.
-
-Processing an inactive core in the Firmament Conversion Core **activates** it, splitting it into one of each of the four spirit cores at once:
+## Inactive & Active Spirit Cores
 
 <ItemGrid>
   <ItemIcon id="ae2lt:firmament_spirit_core_oculus" />
@@ -91,4 +67,9 @@ Processing an inactive core in the Firmament Conversion Core **activates** it, s
   <ItemIcon id="ae2lt:firmament_spirit_core_stride" />
 </ItemGrid>
 
-The four cores correspond to the Oculus, Core, Conduit and Stride pieces of the [Celestweave](../celestweave.md) set, and are the key components for assembling each piece at the [Lightning Assembly Chamber](../machines/lightning-assembly-chamber.md).
+* **Sources of Inactive Spirit Core**: Naturally generated Firmament Conversion Cores have a **50%** chance to start pre-loaded with 1 Inactive Firmament Spirit Core; End City treasure chests also have a **15%** chance to contain one.
+* **Activation**: Processing 1 Inactive Firmament Spirit Core in a Firmament Conversion Core (200 ticks) yields all four active Spirit Cores, corresponding to the four Celestweave armor pieces:
+  * **Firmament Spirit Core: Oculus** → Celestweave Oculus (Helmet)
+  * **Firmament Spirit Core: Core** → Celestweave Core (Chestplate)
+  * **Firmament Spirit Core: Conduit** → Celestweave Conduit (Leggings)
+  * **Firmament Spirit Core: Stride** → Celestweave Stride (Boots)

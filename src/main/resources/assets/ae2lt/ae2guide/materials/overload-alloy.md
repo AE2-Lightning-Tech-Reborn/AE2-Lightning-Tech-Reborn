@@ -17,29 +17,22 @@ item_ids:
   <ItemIcon id="ae2lt:overload_alloy_plate" />
 </ItemGrid>
 
-**Overload Alloy** is an advanced metallic material used in many high-tier recipes, including machine frames, Overloaded Controllers, and several end-tier components.
+**Overload Alloy** is a core metallic material used across machine frames, Overloaded network blocks, and late-game assemblies.
 
-`First mastery of Lightning power.`
+## Overload Alloy Blank
 
-## Processing Chain
-
-1. **Overload Alloy Blank** — crafted at a crafting table
-2. **Overload Alloy** — the finished alloy ingot, refined from the blank in the Lightning Simulation Room, or batch-produced in the Overload Processing Factory from metal and crystal components
-3. **Overload Alloy Plate** — pressed from the Overload Alloy in the Lightning Simulation Room or Overload Processing Factory; required by top-tier recipes such as the Ultimate Overload Core
+**Overload Alloy Blank** is crafted on a crafting table and serves as the intermediate ingredient for early Overload Alloy production.
 
 <RecipeFor id="ae2lt:overload_alloy_blank" />
 
-Overload Alloy can be obtained from two machines:
+## Producing Overload Alloy
 
-| Machine | Inputs | Lightning | Energy | Output |
-|---------|--------|-----------|--------|--------|
-| Lightning Simulation Room | `1` Overload Alloy Blank + `4` Overload Crystal Dust | `1` High Voltage Lightning | `20,000` | `1` Overload Alloy |
-| Overload Processing Factory | `1` Copper Block + `1` Iron Block + `1` Gold Block + `1` Amethyst Block + `1` Eye of Ender + `3` Diamonds | `1` High Voltage Lightning | `100,000` | `27` Overload Alloy |
+Depending on your progression stage, Overload Alloy can be produced through three routes (check your recipe viewer for exact ingredient counts and energy costs):
 
-## Items
+* **Lightning Conversion**: Early-game ground lightning conversion using Overload Alloy Blanks and Overload Crystal Dust.
+* **Lightning Simulation Room**: Controlled refining from Overload Alloy Blanks, Overload Crystal Dust, FE, and High Voltage Lightning with higher blank efficiency.
+* **Overload Processing Factory**: Bulk route producing large batches directly from base metal ingots, gems, FE, and High Voltage Lightning without crafting Blanks first.
 
-| Item | Role |
-|------|------|
-| Overload Alloy Blank | Raw intermediate product |
-| Overload Alloy | Finished alloy ingot, a key crafting material for most Overload machines |
-| Overload Alloy Plate | Pressed plate form, used in advanced recipes such as the Ultimate Overload Core |
+## Overload Alloy Plate
+
+**Overload Alloy Plate** is required for Ultimate Overload Cores and other end-tier recipes. It is pressed from Overload Alloy, Overload Processors, and Netherite Ingots in either the [Lightning Simulation Room](../machines/lightning-simulation-chamber.md) or the [Overload Processing Factory](../machines/overload-processing-factory.md).

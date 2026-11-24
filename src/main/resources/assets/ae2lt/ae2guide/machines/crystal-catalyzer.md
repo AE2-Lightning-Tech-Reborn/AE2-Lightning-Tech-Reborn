@@ -8,122 +8,60 @@ item_ids:
   - ae2lt:pigmee_crystal_catalyzer
 ---
 
-# Crystal Catalyzer
+# Crystal Catalyzer & Pigmee Crystal Catalyzer
 
-<Row>
-  <BlockImage id="ae2lt:crystal_catalyzer" scale="4" />
-  <BlockImage id="ae2lt:pigmee_crystal_catalyzer" scale="4" />
-</Row>
+<ItemGrid>
+  <ItemIcon id="ae2lt:crystal_catalyzer" />
+  <ItemIcon id="ae2lt:pigmee_crystal_catalyzer" />
+</ItemGrid>
 
-The **Crystal Catalyzer** is a specialty processing machine that uses the recipe fluid, FE, lightning from the ME network, and the item in its catalyst slot. It has two operating modes: **Crystal Mode** and **Dust Mode**.
+The **Crystal Catalyzer** continuously duplicates crystals or crystal dust using fluid and power without consuming the catalyst. The **Pigmee Crystal Catalyzer** is a lightweight early-game variant that runs water-based recipes using only Water.
 
-The **Pigmee Crystal Catalyzer** is a simplified variant. Put one full stack (64) of a supported crystal block or mother rock in its catalyst slot; it keeps the blocks and produces the recipe base output every 5 seconds: one crystal for ordinary crystal block recipes, or sixteen for mother rock recipes. It consumes only 1,000 mB of water, uses no FE at all, and never needs Lightning or a Collapse Matrix.
+## Variant Comparison
 
-Both machines share the recipe set, but Pigmee only accepts water recipes. Special-fluid recipes are exclusive to the normal machine. The recipe viewer retains the standard machine's FE, Lightning, quantity and timing data. The Pigmee machine bypasses those energy costs and applies its own fixed stock, duration and base-output rules at runtime; it does not register separate zero-cost recipes.
+| Property | Crystal Catalyzer (Standard) | Pigmee Crystal Catalyzer |
+|----------|------------------------------|--------------------------|
+| Catalyst Slot Limit | 256 | 64 (full stack of 64 required to run) |
+| Output Slot Limit | 16,384 | 64 |
+| Fluid Tank & Fluids | 16,000 mB; uses the recipe's fluid (usually Water, or mod-specific fluids) | Water-based recipes only; fixed 1,000 mB Water per cycle |
+| Energy & Lightning | 1,000,000 FE buffer; consumes recipe FE and Lightning | No FE or Lightning required |
+| Matrix Slot | 1 <ItemLink id="ae2lt:lightning_collapse_matrix" /> for **8×** output | None |
+| Cycle Duration | Defined by recipe (~20 ticks min for common Crystal recipes, ~40 ticks for Dust) | Fixed 100 ticks (5 seconds) |
+| Output per Cycle | Base output × parallel count × (8 if Matrix installed) | Fixed single base output |
+| Upgrade Slot | 1 AE2 <ItemLink id="ae2:redstone_card" /> | None |
 
-## Slots and Capacity
+## Standard Crystal Catalyzer Mechanics
 
-| Slot | Capacity | Notes |
-|------|----------|-------|
-| Catalyst slot | 256 (normal) / 64 (Pigmee) | Holds the item required by the current mode; the item is **not consumed** during processing |
-| Matrix slot | 1 | Optional Lightning Collapse Matrix for a yield bonus |
-| Output slot | 16,384 normal / 64 Pigmee | Processed output; written by the machine only, no external input accepted |
-| Fluid slot | 16,000 mB | Accepts the recipe fluid through pipes or containers; built-in recipes consume 1,000 mB per cycle |
-| FE Buffer | 1,000,000 FE | Built-in energy buffer |
+* **Modes**: Toggle between **Crystal** and **Dust** modes in the UI; both share the catalyst slot, fluid tank, and output slot. The catalyst is **never consumed**.
+* **Parallelism & Costs**: Parallel count equals `floor(catalysts / required catalysts)`, capped by output slot capacity. Regardless of parallelism, each cycle pays only **one single share of fluid and Lightning**, while FE and duration come from the recipe. Processing pauses if output space is full.
+* **Budding Block Routes**: Non-degrading budding blocks such as Flawless Budding Overload Crystal and Flawless Budding Certus Quartz yield a base output of 16 (resolved dynamically from the mature cluster loot table; datapack changes producing multiple distinct items or empty drops invalidate the recipe). On a default 20-tick Flawless Budding recipe:
+  * 1 block without Matrix: **16** per cycle.
+  * 1 block with Matrix: **128** per cycle.
+  * 128 blocks with Matrix: **16,384** per cycle (requires continuous output extraction to sustain throughput at 20 TPS).
+* **Redstone & Automation**: Supports side export configuration and auto-eject. With a Redstone Card installed, pausing preserves progress while finished outputs can still auto-export.
 
-## Operating Modes
+<OptionalSection modId="appflux">
+### Network FE Refill
 
-| Mode | Purpose | Processing Time | Example inputs | Example outputs |
-|------|---------|-----------------|----------------|-----------------|
-| Crystal Mode | Extract crystals from matching crystal blocks | 1 second | Certus Quartz Block, Fluix Block, Overload Crystal Block | Certus Quartz Crystal, Fluix Crystal, Overload Crystal |
-| Dust Mode | Extract crystal dust from matching crystal blocks | 2 seconds | Certus Quartz Block, Fluix Block, Overload Crystal Block | Certus Quartz Dust, Fluix Dust, Overload Crystal Dust |
+With Applied Flux installed, the standard Crystal Catalyzer can automatically refill its 1,000,000 FE internal buffer from FE stored in the connected ME network in addition to external FE cables.
+</OptionalSection>
 
-Both modes share the same catalyst slot, fluid slot, and output slot. The item in the catalyst slot is used for recipe matching and parallel count calculation, but it is not consumed.
+<OptionalSection modId="oritech">
+### Oritech Fluid Recipes
 
-## Operating Flow
+With Oritech installed, specific catalyst recipes (such as Fluxite Block and Uranium Crystal) require dedicated Oritech fluids rather than Water (not supported in the Pigmee variant); check your recipe viewer for the exact fluid and amount.
+</OptionalSection>
 
-1. Select Crystal Mode or Dust Mode with the left-side mode button
-2. Feed the fluid shown in JEI/EMI into the fluid slot through pipes or containers
-3. Put an item matching the selected mode into the catalyst slot
-4. Supply FE to the normal machine (the Pigmee variant needs none)
-5. Connect the normal machine to an ME network with lightning storage; the Pigmee variant does not need lightning
-6. Once a recipe matches, the machine processes automatically
-7. Finished output goes into the output slot
+<OptionalSection modId="justdirethings">
+### Just Dire Things Fluid Recipe
 
-## Special Crystal Fluids
+With Just Dire Things installed, Time Crystal catalyst recipes require a dedicated fluid rather than Water in the standard Crystal Catalyzer; check your recipe viewer for exact fluid requirements.
+</OptionalSection>
 
-These optional integrations run in Crystal Mode, with 100,000 FE and 1 High Voltage Lightning per cycle. The catalyst is retained; each recipe has a base output of one item.
+## Pigmee Crystal Catalyzer Notes
 
-| Crystal | Retained catalyst | Fluid per cycle |
-|---------|-------------------|-----------------|
-| Oritech Fluxite | Block of Fluxite | 1 B Strange Matter |
-| Oritech Uranite Crystal | Uranite Crystal | 1 B Mineral Slurry |
-| Just Dire Things Time Crystal | Time Crystal Block | 1 B Time Fluid |
+Designed as an early-game bridge before a Lightning line is built:
 
-These recipes load only with their corresponding mod. Pigmee cannot run them; Fluxite now requires the normal catalyzer. Existing water recipes retain their costs.
-
-## Non-degrading Mother Rocks
-
-Crystal Mode supports the following mother rocks that do not degrade while growing crystals. Each has a base output of **16 items**, and the mother rock is retained.
-
-| Mother rock | Mod | Product |
-|-------------|-----|---------|
-| Budding Amethyst | Minecraft | Amethyst Shard |
-| Flawless Budding Certus Quartz | AE2 | Certus Quartz Crystal |
-| Flawless Budding Overload Crystal | AE2LT | Overload Crystal |
-| Flawless Budding Ember | Applied Generators | Ember Crystal |
-| Flawless Budding Energized Crystal | NeoECOAE | Energized Crystal |
-
-With an AE2CS version that includes mother rocks, Crystal Mode also supports all 11 families: Nether Quartz, Energized Certus Quartz, Ender Quartz, Energized Fluix, Fluix, Redstone, Resonating, Quantum, Link, Meteor, and Entro.
-
-Mother rock products follow the corresponding mature cluster’s actual drops on the server, including datapack overrides and global loot modifiers, using an unenchanted diamond pickaxe. They do not automatically become purified crystals. The base yield remains 16 items. Recipes with no drops or multiple different products are unavailable. Entro requires ExtendedAE.
-
-Each normal cycle uses 1 B water, 100,000 FE and 1 High Voltage Lightning, with the usual parallel and matrix bonuses. One mother rock produces 16 items per second without a matrix, or 128 with a matrix. With a matrix, 128 mother rocks reach 16,384 items per second. Parallelism is capped by the output slot's total capacity: inserting more mother rocks still works, with a maximum of 16,384 items per cycle.
-
-Pigmee also accepts these water recipes: 64 matching mother rocks produce sixteen crystals every 5 seconds for 1 B water, without consuming the rocks. Compatibility recipes load only when their mod and items are present.
-
-Degrading variants, ExtendedAE's Entro budding blocks, and Time Crystal budding blocks that revert to an immature stage do not qualify. AE2CS's Entro mother rock does not degrade and is supported.
-
-## Lightning Consumption
-
-The normal Crystal Catalyzer consumes lightning from the ME network each time it completes an operation. The type (High Voltage or Extreme High Voltage) and amount of lightning required are defined per recipe. The Pigmee Crystal Catalyzer never consumes lightning.
-
-If the network does not have enough lightning when the operation is ready to complete, the machine will pause and wait until lightning becomes available. No fluid or FE is wasted during this wait.
-
-## Parallel Output and Fluid
-
-Each built-in recipe consumes **1,000 mB of its specified fluid per cycle**. Parallel output and the matrix bonus do not increase this cost. With 256 catalysts and a matrix, a base-output-one recipe produces 2,048 items for the same bucket of fluid.
-
-For the normal machine, parallel count is slot amount / recipe required amount, capped by the output slot's total capacity. Recipes with a base output of one item require 1 matching block each, so inserting 64 valid blocks makes the machine calculate 64 parallel outputs per operation. The Pigmee variant requires exactly one full stack (64 blocks) and produces only the recipe base output, without scaling by catalyst count.
-
-The parallel count is locked when processing starts. Adding or removing items from the catalyst slot during processing will not change the already locked output for that operation.
-
-## Lightning Collapse Matrix Bonus
-
-<ItemImage id="ae2lt:lightning_collapse_matrix" scale="2" float="left" />
-
-With a **Lightning Collapse Matrix** installed in the matrix slot, the normal Crystal Catalyzer's per-operation output is increased to **8×**. The matrix is not consumed during processing. The Pigmee variant has no matrix slot effect and always produces only the recipe base output.
-
-Final output = base output × parallel count × matrix multiplier.
-
-## Notes
-
-* The Crystal Catalyzer is powered by **external FE** on its sides, not by AE from the ME network
-* Lightning is consumed from the **ME network storage**, so the machine must be connected to a network with lightning available
-* The machine itself is also an ME network device — connecting it to the network lets you feed it through AE2 Interfaces or Pattern Providers
-* Supports Auto Export; output sides can be configured in the GUI
-* The Crystal Catalyzer **does not** support Speed Cards
-* Crystal Mode completes in **1 second** minimum; Dust Mode completes in **2 seconds** minimum; Pigmee Crystal Catalyzer cycles take **5 seconds** (no FE required)
-
-## Redstone Control
-
-The upgrade panel accepts one AE2 Redstone Card. With the card installed, the toolbar button cycles through **Ignore Redstone**, **Active with Signal**, and **Active without Signal**. Without a card, automatic operation is unchanged. Pulse mode is not supported.
-
-- To limit output stock, configure an ME Level Emitter to signal when the output reaches its stop condition, and select Active without Signal on the machine.
-- To preserve input stock, monitor the consumed resource, signal while enough remains, and select Active with Signal.
-
-A redstone stop preserves the current recipe and paid progress, pausing processing energy, material consumption and new output. Processing resumes when allowed. Automation can still remove existing items. The emitter measures only its own ME network inventory; export catalyzer products into that network for output-stock control.
-
-This is a signal gate: one output batch, one input debit or concurrent machines can cross a threshold. Leave room for a full operation when protecting an input reserve, and reduce batch size when a tighter output limit is needed.
-
-The catalyzer continues auto-exporting completed products while paused. This upgrade slot applies to the normal Crystal Catalyzer.
+* Requires no ME network, FE, Lightning, or Matrix.
+* Place a full stack of **64** valid catalysts for a water-based recipe and supply Water; every 100 ticks it consumes 1,000 mB Water and produces one base output without consuming catalysts.
+* Supports output side configuration and auto-export for early automation.

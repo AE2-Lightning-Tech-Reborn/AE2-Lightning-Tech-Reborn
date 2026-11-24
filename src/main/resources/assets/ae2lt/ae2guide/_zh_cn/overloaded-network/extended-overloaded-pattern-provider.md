@@ -10,44 +10,19 @@ item_ids:
 
 # 扩展过载样板供应器
 
-<Row>
-  <BlockImage id="ae2lt:extended_overloaded_pattern_provider" scale="4" />
-</Row>
+<ItemGrid>
+  <ItemIcon id="ae2lt:extended_overloaded_pattern_provider" />
+  <ItemIcon id="ae2lt:extended_overloaded_pattern_provider_upgrade" />
+</ItemGrid>
 
-**扩展过载样板供应器**是 <ItemLink id="ae2lt:overloaded_pattern_provider" /> 的容量强化版本。它继承过载样板供应器的**全部功能**，包括无线模式、自动回收、分配策略、过载样板支持等，唯一的区别是拥有**更多样板槽位**，专为需要海量样板的大型自动化网络设计。
+**扩展过载样板供应器**是 [过载样板供应器](overloaded-pattern-provider.md) 的多页扩容版本，适合集中管理大批量同类型加工样板。
 
-无线模式、回收模式、分配策略、过载样板等的用法与过载样板供应器完全相同，详见 <ItemLink id="ae2lt:overloaded_pattern_provider" /> 页面。
+## 规格与升级
 
-## 样板容量
-
-扩展过载样板供应器的样板槽位按**页**组织，每页 36 个槽位：
-
-* 默认 **4 页**，共 **144 个样板槽位**
-* 页数可在模组配置中调整，范围为 **1 ~ 64 页**（即 36 ~ 2304 个槽位）
-
-相比之下，普通的过载样板供应器固定为 36 个槽位（相当于 1 页）。
-
-## 获取方式
-
-### 直接合成
-
-用一个过载样板供应器与一枚 <ItemLink id="ae2lt:ultimate_overload_core" /> 合成：
+* **分页样板容量**：每页 **36 个样板槽**，默认提供 **4 页（共 144 个样板槽）**；服务器配置允许将页数调整在 **1–64 页**之间。
+* **完整继承功能**：与普通过载样板供应器共享同一套普通/无线发配、阻挡策略、自适应倍增、20–128 tick 主动回收轮询、输入过滤以及过载样板支持。
+* **获取与原地升级**：既可直接合成扩展过载样板供应器，也可以手持**扩展过载样板供应器升级**对已放置的过载样板供应器使用，原地升级并保留已有样板与配置。
 
 <RecipeFor id="ae2lt:extended_overloaded_pattern_provider" />
-
-### 原地升级
-
-<ItemImage id="ae2lt:extended_overloaded_pattern_provider_upgrade" scale="2" float="left" />
-
-如果基地里已经铺设并配置好了**过载样板供应器**，可以用**扩展过载样板供应器升级**将它**原地升级**为扩展版，并**完整保留**其中的样板、无线连接、各项设置以及方块朝向，无需拆机重连。
-
-用法：手持扩展过载样板供应器升级，**右键**一台已放置的过载样板供应器即可，每次升级消耗一个升级物品。
-
-注意事项：
-
-* 只能升级**过载样板供应器**，对原版样板供应器无效
-* 已经是扩展版的供应器无法再次升级
-
-升级物品本身由一个扩展过载样板供应器与一个锭合成：
 
 <RecipeFor id="ae2lt:extended_overloaded_pattern_provider_upgrade" />

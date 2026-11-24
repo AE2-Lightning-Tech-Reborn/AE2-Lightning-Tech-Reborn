@@ -11,73 +11,58 @@ item_ids:
 
 # Tianshu Crafting Terminal
 
-The <ItemLink id="ae2lt:tianshu_crafting_terminal" /> combines a crafting table, smithing table, Overload Alloy Anvil, stonecutter, and Cell Workbench in one ME terminal. Attach it to a cable; **no Tianshu Supercomputer is required**.
+<ItemGrid>
+  <ItemIcon id="ae2lt:tianshu_crafting_terminal" />
+  <ItemIcon id="ae2lt:wireless_tianshu_crafting_terminal" />
+</ItemGrid>
+
+Available in both wired and wireless variants, the **Tianshu Crafting Terminal** integrates five workstations into a single ME terminal alongside Tianshu Supercomputer inventory maintenance controls.
 
 <RecipeFor id="ae2lt:tianshu_crafting_terminal" />
 
-The wireless version offers the same work pages and can also be used as a Wireless Universal Terminal module.
-
 <RecipeFor id="ae2lt:wireless_tianshu_crafting_terminal" />
 
-<a name="work-pages"></a>
+## Five Built-In Work Pages
 
-## Work Pages
+Work slot contents and stonecutting selections persist when switching pages or closing the terminal (stored on the terminal part and shared by users on wired terminals, or stored on the terminal host for wireless variants):
 
-Use the tabs on the right to switch pages:
+| Work Page | Short Tab | Capabilities |
+|-----------|-----------|--------------|
+| **Crafting** | Craft | 3×3 crafting grid pulling from ME storage and player inventory |
+| **Smithing** | Smith | Template, base, and addition slots for smithing recipes |
+| **Overload Alloy Anvil** | Anvil | Repairing, enchantment combining, and renaming with vanilla XP costs and no wear |
+| **Stonecutting** | Stone | Insert input, select a stonecutting recipe, and take outputs |
+| **Cell Workbench** | Cell | Configure partitions, upgrade cards, fuzzy options, and copy mode on ME storage cells |
 
-* **Crafting:** Make items in the 3×3 crafting grid.
-* **Smithing:** Insert a template, base, and addition, then take the result.
-* **Anvil:** Repair, combine enchantments, or rename items. Taking the result costs the displayed experience.
-* **Stonecutting:** Insert an ingredient, select a recipe, and take the result.
-* **Cell Workbench:** Insert an editable ME storage cell to configure partitions, upgrade cards, and fuzzy matching. Scroll the filter and upgrade areas separately; copy mode controls whether the configuration remains after removing the cell.
+* **Clearing Slots**: Return work-grid contents to player inventory or ME storage (limited by available space).
+* **Recipe Transfer & Ctrl-Craft**: Supported work pages accept recipe transfers from your recipe viewer. Holding `Ctrl` while transferring uses available stock first, opens a crafting confirmation for missing craftable ingredients, and fills the grid upon completion.
 
-Crafting, smithing, stonecutting, and anvil pages support JEI recipe transfer. **Ctrl-click transfer** uses available ingredients first, then opens crafting confirmation for missing craftable materials. Transfer again after the job completes.
+## Wireless Variant & Integrations
 
-## Saved Inputs
+* Bind the Wireless Tianshu Crafting Terminal to an ME network and keep it charged; range follows your bound Wireless Access Point or [Wireless Overloaded Controller](../overloaded-network/wireless-network.md).
 
-Switching pages or closing the terminal keeps its inputs. Smithing, anvil, stonecutting, and Cell Workbench inputs and settings stay with the terminal, so you can continue when reopening it. They do not return to your inventory when closing. All players using the same wired terminal share its work slots.
+<OptionalSection modId="ae2wtlib">
+* **AE2WTLib Universal Terminal**: With AE2WTLib installed, the Wireless Tianshu Crafting Terminal integrates with compatible Universal Wireless Terminals.
+</OptionalSection>
 
-<a name="inventory-maintenance"></a>
+<OptionalSection modId="jei">
+## JEI Wireless Ingredient Supply
 
-## Inventory Maintenance
+Enable **JEI Wireless Supply** under **Settings → Tianshu Settings** (off by default; independent of in-terminal Ctrl recipe transfer):
 
-When a formed Tianshu Supercomputer is available on the network, the terminal can configure automatic restock rules per item: crafting starts when the stored amount drops **below** the lower bound, stops when it **reaches** the upper bound, and each job requests the configured batch size.
+* While carrying a powered, network-bound Wireless Tianshu Terminal or compatible universal terminal in your inventory (or Curios slot), transferring a single or Shift-batch recipe via JEI into any supported crafting table or machine automatically pulls missing ingredients from your ME network into your inventory.
+* Keep free inventory slots available; if a transfer is canceled or fails partway, already extracted items remain in your inventory.
+</OptionalSection>
 
-### Configuration
+<OptionalSection modId="emi">
+## EMI Recipe Transfer
 
-* **Shift + middle-click** a craftable item in the terminal to open its Inventory Maintenance editor, which works much like an ME Requester.
-* The **Inventory Maintenance** button opens an overview listing every configured entry, including materials whose current stock is zero. Click an entry to edit its rule.
-* The **Maintainable** view filters the terminal list to materials configured for inventory maintenance, making them easier to review together.
+With EMI installed, supported work pages inside the Tianshu Crafting Terminal support standard EMI recipe filling and `Ctrl` auto-craft filling. External workbench auto-extraction is specific to the JEI Wireless Supply feature.
+</OptionalSection>
 
-* **Start below:** Starts automatic crafting when the material falls below the configured value.
-* **Stop above:** Stops automatic crafting when the material rises above the configured value.
-* **Per job:** Sets the amount requested by each automatic crafting job.
-* **Enabled:** Enables or disables this material's maintenance rule.
-* **Check now:** Immediately checks this material's stock.
-* **Cancel job:** Cancels the currently running automatic crafting job.
-* **Crafting topology:** Configures material retention so that specified materials remain in stock.
+## Inventory Maintenance Access
 
-Click any entry under **Crafting topology** to set how much of that material maintenance jobs may not consume. Switch **Tianshu global** to **Rule additional** to configure an extra reserve for this rule. A rule-specific reserve only changes the effective protection when it is greater than the matching global reserve; see “Global Reserves” below.
+When connected to a network with an online [Tianshu Supercomputer](../tianshu/tianshu-index.md), press `Shift + Middle Click` on any craftable entry or open the **Inventory Maintenance** overview to manage stock rules:
 
-> Configured materials show a colored marker in Tianshu terminals: gray means the rule is disabled, green means the stock target is satisfied, orange means the rule is idle or crafting, and red indicates missing materials.
-
-<a name="global-reserves"></a>
-
-## Global Reserves
-
-A global reserve protects a quantity of an item from automatic maintenance jobs. Player-requested crafting jobs may still use this protected stock.
-Use the search box to find stored network content and click an item to configure it. Items may also be dragged from JEI or EMI onto the target in the lower-left corner.
-**Exact match** protects only the selected component variant, including properties such as durability and enchantments. **Ignore components** groups all variants with the same item ID.
-**Reserve** sets the protected quantity. Set it to `-1` to reserve all existing stock.
-
-If the overview becomes a recovery page, zero out or delete old entries one by one to reveal the remaining entries.
-
-<a name="settings"></a>
-
-## Terminal Settings
-
-Open **Terminal Settings → Tianshu Settings** to enable **JEI wireless ingredients**. Wired and wireless terminals share this setting.
-
-This feature is off by default. Carry a powered, connected wireless Tianshu terminal in your inventory or Curios. When transferring a recipe to a workbench or machine with JEI transfer support, missing items are supplied from the network. Tianshu modules in a Wireless Universal Terminal work too.
-
-Keep inventory space free for ingredients. A normal click fills one recipe; Shift fills in bulk. Only items are supplied. If transfer fails or you close the screen, extracted items remain in your inventory.
+* Restocking starts when stock drops strictly below **Start below** and stops once it reaches **Stop at**. Each order uses the fixed batch size, may overshoot **Stop at**, and never cancels an already running order.
+* Reserved Inventory rules restrict only maintenance planning—manual crafting and other ME automation remain unaffected. See [Tianshu Pattern Encoding Terminal](pattern-encoding-terminal.md#inventory-maintenance--reserved-inventory) for full details and examples.

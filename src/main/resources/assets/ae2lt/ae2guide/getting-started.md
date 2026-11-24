@@ -8,100 +8,77 @@ navigation:
 
 # Getting Started
 
-This page walks you through the full path from scratch to a working first Lightning production line.
+This page walks through the complete sequence from zero to your first working Lightning production line. AE2 Lightning Tech is designed for mid-to-late-game automation, so having a reliable ME network and steady FE generation before starting is strongly recommended.
 
 ## Prerequisites
 
-Before starting, make sure you already have a functioning AE2 ME network that includes at least:
+Before beginning, make sure you have:
 
-* An <ItemLink id="ae2:controller" />, or a small controllerless network
-* A few <ItemLink id="ae2:certus_quartz_crystal" />, <ItemLink id="ae2:fluix_crystal" /> and <ItemLink id="ae2:fluix_block" />
-* A <ItemLink id="minecraft:lightning_rod" /> and some AE2 Budding Certus Quartz of various tiers
+* A functioning ME network (an <ItemLink id="ae2:controller" /> or a small controllerless setup), an <ItemLink id="ae2:drive" />, and an <ItemLink id="ae2:inscriber" />
+* A supply of <ItemLink id="ae2:certus_quartz_crystal" />, <ItemLink id="ae2:fluix_block" />, <ItemLink id="ae2:quartz_block" />, and AE2 Budding Certus Quartz
+* At least one <ItemLink id="minecraft:lightning_rod" />
+* A steady source of FE power for processing machines
 
-## Step 1: Obtain Overload Crystals
+## Natural vs. Artificial Lightning
+
+In-world lightning strikes fall into two categories that determine conversion and collection behavior:
+
+* **Natural Lightning**: Strikes generated naturally by thunderstorm weather. Required for the Refined Budding structure, yields **Extreme High Voltage Lightning** in a Lightning Collector, and nurtures Electro-Chime Crystals.
+* **Artificial Lightning**: Strikes summoned by a Channeling trident, a carried or dropped Overload Crystal, or other mods. Valid for the Simple Budding structure and in-world item conversions, and yields **High Voltage Lightning** in a Lightning Collector.
+
+## Step 1: Obtain Overload Crystals and Budding Blocks
 
 <ItemImage id="ae2lt:overload_crystal" scale="2" float="left" />
 
-**Overload Crystal** is the most fundamental material in this mod — nearly every recipe relies on it or one of its derivatives.
+**Overload Crystals** and **Overload Crystal Dust** are the entry point of the mod. They are farmed from Budding Overload Crystal blocks created by striking a 3×3 multiblock structure with lightning:
 
-You obtain it by growing **Budding Overload Crystal** blocks, which are produced from AE2 Budding Certus Quartz via a multiblock lightning ritual:
-
-1. Assemble a 3×3 structure with the budding quartz in the center. The rich variant uses <ItemLink id="ae2lt:overload_crystal_block" /> at the four corners and <ItemLink id="ae2:fluix_block" /> on the four cardinal sides; the simple variant swaps the corners for <ItemLink id="ae2:quartz_block" /> (Certus Quartz Block) while keeping fluix on the sides
-2. Place a <ItemLink id="minecraft:lightning_rod" /> directly above the center
-3. Wait for a lightning strike — natural lightning is required for the rich variant; any lightning works for the simple fluix-only variant
-4. Place the resulting **Budding Overload Crystal** in the world and wait for buds to grow on its surface
-
-Budding Overload Crystal behaves the same way as Budding Certus Quartz:
-
-* Buds grow in order: Small → Medium → Large → **Overload Crystal Cluster**
-* The <ItemLink id="ae2:growth_accelerator" /> works on Overload Crystal buds as well
-* Breaking a **not yet fully grown** bud drops **Overload Crystal Dust**
-* Breaking a **fully grown** Overload Crystal Cluster drops **Overload Crystals**, and Fortune applies
-* Imperfect budding blocks may decay one tier each time a bud grows. When mined, Silk Touch preserves Flawed, Cracked, and Damaged tiers; Flawless drops as Flawed
-
-See [Overload Crystal](materials/overload-crystal.md) for the full details.
-
-## Step 2: Obtain Starter Materials via Lightning Transmutation
-
-Many starter materials are produced through **Lightning Transmutation** — drop items on the ground, then let lightning strike the drops to transmute them.
-
-<ItemImage id="ae2lt:overload_alloy" scale="2" float="left" />
-
-Typical transmutation outputs include:
-
-* **Overload Alloy**, **Overload Circuit Board**, **Overload Inscriber Press** and other basic materials
-* **Lightning Collector**, **Lightning Simulation Room** and the first wave of machines
-* **Electro-Chime Crystal** and **Lightning Storage Cell I**, the starter items for the Lightning system
-
-There are two ways to trigger lightning transmutation:
-
-* **Natural thunderstorm**: during thunderstorm weather, open-air item drops can be struck by natural lightning
-* **Active summon**: carry an Overload Crystal and stand in the open for about 10 seconds to summon an artificial lightning bolt nearby
-
-> Artificial lightning can trigger transmutation recipes, but **cannot** trigger the multiblock conversion in the next step. The multiblock conversion only accepts natural lightning strikes.
-
-## Step 3: Obtain a Flawless Budding Overload Crystal
-
-<ItemImage id="ae2lt:flawless_budding_overload_crystal" scale="2" float="left" />
-
-**Flawless Budding Overload Crystal** does not decay while growing, and is the backbone of any large-scale production line. It can only be produced through the **rich structure** variant with a **natural lightning strike**:
+1. Build a flat 3×3 layer with a Budding Certus Quartz block in the center and <ItemLink id="ae2:fluix_block" /> on the four cardinal sides (N/S/E/W).
+2. Choose the corner blocks based on your progression:
+   * **Simple Structure (for starting out)**: Place <ItemLink id="ae2:quartz_block" /> on the four corners. Accepts **any lightning** (artificial or natural) and converts Flawless, Flawed, or Chipped Budding Certus Quartz into one-tier-lower Flawed, Cracked, or Damaged Budding Overload Crystal.
+   * **Refined Structure (for Flawless)**: Place <ItemLink id="ae2lt:overload_crystal_block" /> on the four corners. Requires **natural lightning** and preserves the exact budding tier.
+3. Place a <ItemLink id="minecraft:lightning_rod" /> directly on top of the center block and let lightning strike it. The eight surrounding blocks are consumed, the center transforms, and the Lightning Rod remains.
 
 <GameScene zoom="4" background="transparent">
   <ImportStructure src="assets/assemblies/flawless_budding_overload.snbt" />
   <IsometricCamera yaw="195" pitch="30" />
 </GameScene>
 
-* Place a **Flawless Budding Quartz** in the center
-* Place a <ItemLink id="ae2:fluix_block" /> on each of the four cardinal sides (E / W / N / S) at the same height
-* Place an **Overload Crystal Block** on each of the four corners
-* Place a **Lightning Rod** directly above the center
+> Only the **Refined Structure + natural lightning** produces <ItemLink id="ae2lt:flawless_budding_overload_crystal" />, which never degrades on growth. Start with the Simple Structure first until you can craft Overload Crystal Blocks.
 
-Once the structure is built, wait for a **natural lightning strike** to hit the Lightning Rod to complete the conversion. When the strike lands, the eight surrounding blocks are consumed, and the center block becomes a Flawless Budding Overload Crystal.
+Budding Overload Crystal grows Small, Medium, and Large Buds into Overload Crystal Clusters on adjacent faces and responds to <ItemLink id="ae2:growth_accelerator" />. Breaking an immature bud yields Overload Crystal Dust; breaking a fully grown cluster drops Overload Crystals (affected by Fortune). See [Overload Crystal](materials/overload-crystal.md) for full drop and decay rules.
 
-> The Flawless conversion only accepts **natural lightning** during a thunderstorm. Artificial lightning summoned by carrying Overload Crystals will not trigger it. Lower-tier budding crystals have a cheaper "simple structure" variant described on the [Overload Crystal](materials/overload-crystal.md) page.
+## Step 2: Early Materials via Lightning Conversion
 
-## Step 4: Build Your First Lightning Line
+Several starter materials and machines are crafted by dropping items on the ground and letting lightning (natural or artificial) strike them (check your recipe viewer for exact ingredients and counts in your modpack).
 
-Once you have starter materials and basic machines, you can put together the minimum viable line: **collect → store → consume**.
+By default, carrying an <ItemLink id="ae2lt:overload_crystal" /> in **any hotbar slot or your offhand** summons an artificial lightning bolt at your position roughly every 200 ticks (10 seconds). An Overload Crystal dropped on the ground also runs its own independent 200-tick timer and strikes at its location. Neither artificial trigger requires direct sky access (spectator mode does not trigger, and moving the crystal out of valid slots resets the carried timer).
 
-1. **Collect**: place a **Lightning Collector** out in the open and connect it to your ME network. When lightning strikes, the collector injects Lightning energy directly into the network
-2. **Store**: put a **Lightning Storage Cell I** into a <ItemLink id="ae2:drive" />; Lightning will appear in the ME terminal alongside items and fluids
-3. **Consume**: the **Lightning Simulation Room** and **Lightning Assembly Chamber** use Lightning stored in the ME network when completing recipes
+Typical early progression using lightning conversion and an Inscriber:
 
-Useful supporting devices:
+1. **Core Intermediates**: Convert your first <ItemLink id="ae2lt:overload_inscriber_press" /> and <ItemLink id="ae2lt:overload_alloy" />, press **Unoverloaded Circuit Boards** in an <ItemLink id="ae2:inscriber" />, convert them into **Overload Circuit Boards** via lightning, and finish <ItemLink id="ae2lt:overload_processor" /> in the Inscriber.
+2. **Starter Machines & Storage**: Convert your first <ItemLink id="ae2lt:lightning_collector" />, <ItemLink id="ae2lt:lightning_cell_component_i" />, and <ItemLink id="ae2lt:lightning_simulation_room" />.
 
-* [Tesla Coil](lightning/tesla-coil.md) — consumes Overload Crystal Dust and FE to steadily produce High / Extreme High Voltage Lightning
-* [Atmospheric Ionizer](machines/atmospheric-ionizer.md) — consumes AE energy and **Weather Condensate** to force the world weather to change
+<OptionalSection modId="extendedae">
+With ExtendedAE installed, the **Circuit Slicer** and **Crystal Assembler** offer faster shortcuts for Unoverloaded Circuit Boards and Overload Processors (check your recipe viewer for exact recipes).
+</OptionalSection>
 
-## Step 5: Mid- and Late-Game Goals
+## Step 3: Assemble the Cell and Build Your First Line
 
-Once your starter line is running, you can unlock the following in turn:
+Lightning conversion produces the crafting material <ItemLink id="ae2lt:lightning_cell_component_i" />, which cannot be placed in a drive directly. Combine it with a <ItemLink id="ae2lt:lightning_item_cell_housing" /> (or use the shaped recipe) to craft a <ItemLink id="ae2lt:lightning_storage_component_i" />, then insert that cell into an <ItemLink id="ae2:drive" />.
 
-* **Lightning Simulation Room** (3 input slots, simple conversions) and **Lightning Assembly Chamber** (9 input slots, complex assembly)
-* **Overload Processing Factory** (9 input slots, supports item + fluid I/O, and parallel processing via the Lightning Collapse Matrix)
-* **Crystal Catalyzer** (water + slotted item, with Crystal / Dust modes)
-* **Overloaded ME Controller** — each controller adds 128 channels to the network
-* **Overloaded Cable** — a single cable has no per-cable channel limit
-* **Overloaded Pattern Provider** and **Overloaded ME Interface** — 36 slots each, with wireless dispatch and wireless I/O
+<RecipeFor id="ae2lt:lightning_storage_component_i" />
 
-See the category pages in the left sidebar for the full details.
+Connect your minimal **Collect → Store → Consume** loop:
+
+1. **Collect**: Place a <ItemLink id="ae2lt:lightning_collector" /> on your ME network with a <ItemLink id="minecraft:lightning_rod" /> directly on top of it. Strikes landing within the 3×3×3 cube centered on the Lightning Rod are written straight into ME storage.
+2. **Store**: Insert your **Lightning Storage Cell I** into an ME Drive. Stored High Voltage and Extreme High Voltage Lightning now appear in ME terminals alongside items and fluids.
+3. **Consume**: Place a <ItemLink id="ae2lt:lightning_simulation_room" /> connected to the same ME network and supplied with FE. FE drives progress during crafting; Lightning is deducted from the ME network upon completion.
+
+## Step 4: Next Steps
+
+Once your starter line is running, expand in whichever direction your base needs:
+
+* **Reliable Lightning Supply**: Build a [Tesla Coil](lightning/tesla-coil.md) to manufacture High Voltage Lightning from Overload Crystal Dust and FE, or use an [Atmospheric Ionizer](machines/atmospheric-ionizer.md) to set thunderstorm weather for natural strikes.
+* **Advanced Processing**: Progress into the [Lightning Assembly Chamber](machines/lightning-assembly-chamber.md), [Overload Processing Factory](machines/overload-processing-factory.md), [Crystal Catalyzer](machines/crystal-catalyzer.md), and [Mining Factory](machines/mining-factory.md), and craft the [Lightning Collapse Matrix](materials/lightning-collapse-matrix.md) to unlock substitution and parallelism.
+* **Overloaded Network**: Upgrade to the [Overloaded ME Controller](overloaded-network/overloaded-controller.md), [Overloaded Cable](overloaded-network/overloaded-cable.md), [Wireless Network](overloaded-network/wireless-network.md), 36-pattern [Overloaded Pattern Provider](overloaded-network/overloaded-pattern-provider.md), and 36-config-slot [Overloaded ME Interface](overloaded-network/overloaded-interface.md).
+* **Tianshu & End-Game Gear**: Construct the [Tianshu Matter Warping Matrix](matrix/matrix-index.md) and [Tianshu Supercomputer](tianshu/tianshu-index.md), and harvest [Firmament Materials](materials/firmament-materials.md) in the End for [Celestweave](celestweave.md) armor and the [Electromagnetic Railgun](electromagnetic-railgun.md).

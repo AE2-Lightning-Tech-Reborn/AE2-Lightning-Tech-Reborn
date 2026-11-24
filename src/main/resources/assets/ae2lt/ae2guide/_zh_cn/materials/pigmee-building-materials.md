@@ -75,37 +75,30 @@ item_ids:
 
 # 猪咪建材
 
-<Row>
-  <BlockImage id="ae2lt:white_pigmee_building_panel" scale="4" />
-  <BlockImage id="ae2lt:white_pigmee_framed_building_panel" scale="4" />
-</Row>
-
-**猪咪建材**是一套染色建筑方块，分为基础建材、彩色板材与台阶三类；材料与工具需求与原版石质方块相同。
-
-## 基础建材
-
-以 8 块圆石围住 1 只**彩虹猪咪**，合成 8 块猪咪建材，彩虹猪咪保留在合成栏中。
-
-## 彩色板材与台阶
-
-基础建材可在切石机中以 1∶1 制作全部 32 种彩色板材（16 色 × 素板/框板），不需要染料；素板、框板与台阶之间也可以 1∶1 互相切换。
-
-| 配方 | 产出 |
-| --- | --- |
-| 切石：基础建材 → 板材 | 1 |
-| 切石：基础建材 → 台阶 | 2 |
-| 工作台：3 板材横排 | 6 台阶 |
-| 切石：任意板材 / 台阶 → 其他款式 | 1 |
-| 合成：任意 2 台阶 | 1 基础建材 |
-| 合成：任意 1 板材 | 1 基础建材 |
-
-素板与框板使用同一种颜色时自动连纹。各款式示例如下，全部款式都可在 JEI 或 EMI 中查询配方。
-
 <ItemGrid>
   <ItemIcon id="ae2lt:pigmee_building_block" />
+  <ItemIcon id="ae2lt:pigmee_building_slab" />
   <ItemIcon id="ae2lt:white_pigmee_building_panel" />
   <ItemIcon id="ae2lt:white_pigmee_framed_building_panel" />
-  <ItemIcon id="ae2lt:pigmee_building_slab" />
   <ItemIcon id="ae2lt:white_pigmee_building_slab" />
   <ItemIcon id="ae2lt:white_pigmee_framed_building_slab" />
 </ItemGrid>
+
+**猪咪建材**是一套基于 [彩虹猪咪](rainbow-pigmee.md) 制作的现代装饰方块体系，包含基础版与 16 种颜色的素板、框板及其对应台阶。
+
+## 合成与切割路线
+
+1. **制造猪咪建材方块**：通过彩虹猪咪与圆石在工作台合成**猪咪建材方块**（彩虹猪咪保留在合成栏内）。
+
+<RecipeFor id="ae2lt:pigmee_building_block" />
+2. **切石加工款式**：在切石机（或天枢合成终端的切石机工作页）中，1 个**猪咪建材方块**可切割为：
+   * 任意 1 个彩色**猪咪素板**（16 色）或彩色**猪咪框板**（16 色），共 32 种完整板材。
+   * 2 个基础**猪咪建材台阶**，或任意 2 个彩色**猪咪素板台阶**（16 色） / 彩色**猪咪框板台阶**（16 色），共 32 种彩色台阶。
+3. **工作台与互换**：
+   * 3 个同款板材（或猪咪建材方块）在工作台横排可合成 6 个对应台阶。
+   * 彩色板材与台阶可通过切石机直接互换款式，也可用任意 1 个彩色板材或 2 个台阶合回 1 个基础**猪咪建材方块**，并支持使用彩虹猪咪换色。
+
+## 视觉样式说明
+
+* **猪咪素板 / 猪咪素板台阶**：纯色平滑表面，适合大面积墙面、地面与设备室铺装。
+* **猪咪框板 / 猪咪框板台阶**：边缘带有结构线框，相邻铺设时形成规整的网格分缝效果。
