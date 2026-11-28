@@ -8,6 +8,7 @@ import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.UUID;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
 /** Node-owned claims move on split/merge; balances are never copied into either grid. */
@@ -35,9 +36,12 @@ public final class WirelessEnergyGridService implements IGridService, IGridServi
     @Override public void saveNodeData(IGridNode node, CompoundTag data) {
         UUID id = claims.get(node);
         if (id != null) data.putUUID(CLAIM, id);
-        // GTM/LDLib also saves nodes off-thread. Only the existing claim is safe to export there.
-        var server = node.getLevel().getServer();
-        if (!server.isSameThread()) return;
+        // Client-side previews and GTM/LDLib can serialize a node outside the server
+        // thread. The ledger is world-owned server state, so only a live ServerLevel
+        // on its owner thread may create or update migration-budget data.
+        if (!(node.getLevel() instanceof ServerLevel serverLevel)) return;
+        var server = serverLevel.getServer();
+        if (server == null || !server.isSameThread()) return;
         // AE2 calls saveNodeData before removing a migrating node from its old grid.
         var current = budget(server.getTickCount());
         WirelessEnergyLedger.get(server).registerBudget(current);
