@@ -16,6 +16,7 @@ import net.minecraft.world.entity.LightningBolt;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.LightningRodBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -94,7 +95,7 @@ public final class NaturalLightningTransformationHandler {
         // Search the inverse cube around the strike. With offsets limited to one
         // block, Manhattan order is also squared-distance order, nearest first.
         for (BlockPos rodPos : BlockPos.withinManhattan(lightningPos, 1, 1, 1)) {
-            if (!level.hasChunkAt(rodPos) || !level.getBlockState(rodPos).is(Blocks.LIGHTNING_ROD)) {
+            if (!level.hasChunkAt(rodPos) || !(level.getBlockState(rodPos).getBlock() instanceof LightningRodBlock)) {
                 continue;
             }
 
@@ -119,7 +120,7 @@ public final class NaturalLightningTransformationHandler {
         for (int yOffset = 0; yOffset <= 2; yOffset++) {
             BlockPos rodPos = lightningPos.below(yOffset);
             BlockState rodState = level.getBlockState(rodPos);
-            if (!rodState.is(Blocks.LIGHTNING_ROD)) {
+            if (!(rodState.getBlock() instanceof LightningRodBlock)) {
                 continue;
             }
 
